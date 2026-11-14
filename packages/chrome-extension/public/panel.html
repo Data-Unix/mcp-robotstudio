@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MCP-ROBOTSTUDIO RWS Monitor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="title-row">
+        <h1>MCP-ROBOTSTUDIO RWS</h1>
+        <span class="badge badge-readonly" id="readonly-badge">SOLO LECTURA</span>
+        <span class="badge badge-status-warn" id="connection-badge">Conectando…</span>
+      </div>
+      <div class="toolbar">
+        <button type="button" class="primary" id="refresh-btn">Actualizar</button>
+        <button type="button" id="open-sidepanel-btn" title="Abrir en el panel lateral de Chrome">Panel lateral</button>
+        <a class="btn-link" href="options.html" id="options-link" target="_blank" rel="noopener">Opciones</a>
+      </div>
+    </header>
+
+    <div id="http-warning" class="banner banner-warn hidden">
+      Aviso de red: la conexion RWS usa HTTP sin cifrado hacia una IP remota. En RWS, la contrasena viaja como Digest MD5 (nunca Basic), pero los datos leidos circulan en claro por la LAN. Use loopback (127.0.0.1) siempre que sea posible.
+    </div>
+
+    <div id="error-banner" class="banner banner-err hidden" role="alert"></div>
+
+    <section class="card" aria-labelledby="heading-controller">
+      <h2 id="heading-controller">Estado del controlador</h2>
+      <div class="kv-grid" id="controller-grid"></div>
+      <div class="kv-grid" id="motion-grid" style="margin-top: 6px;"></div>
+    </section>
+
+    <section class="card" aria-labelledby="heading-modules">
+      <h2 id="heading-modules">Modulos RAPID (<span id="modules-count">0</span>)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Modulo</th>
+              <th>Tipo</th>
+            </tr>
+          </thead>
+          <tbody id="modules-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="heading-signals">
+      <h2 id="heading-signals">Senales I/O (<span id="signals-count">0</span>)</h2>
+      <div class="row-inline">
+        <input
+          type="text"
+          id="signal-filter"
+          placeholder="Filtrar senales por nombre (ej. DRV1, DI, DO)…"
+          aria-label="Filtrar senales"
+        />
+        <button type="button" id="signal-filter-btn">Filtrar</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="signals-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="heading-events">
+      <h2 id="heading-events">Ultimos eventos (/rw/elog/0)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Titulo</th>
+              <th>Origen</th>
+              <th>Hora</th>
+            </tr>
+          </thead>
+          <tbody id="events-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="heading-symbol">
+      <h2 id="heading-symbol">Lectura de simbolo RAPID (solo GET)</h2>
+      <form id="symbol-form" class="row-inline">
+        <input type="text" id="symbol-module" value="BASE" placeholder="Modulo (ej. BASE)" aria-label="Modulo RAPID" />
+        <input type="text" id="symbol-name" value="tool0" placeholder="Simbolo (ej. tool0)" aria-label="Simbolo RAPID" />
+        <button type="submit" id="read-symbol-btn">Leer</button>
+      </form>
+      <pre id="symbol-output">Pulse "Leer" para consultar un simbolo RAPID.</pre>
+    </section>
+
+    <p class="footer-note">
+      Extension estrictamente de solo lectura: no modifica senales, simbolos, programas ni movimiento del robot.
+    </p>
+
+    <script type="module" src="panel.js"></script>
+  </body>
+</html>

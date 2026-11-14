@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/panel/ctrlstate",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "389"
+  },
+  "note": "",
+  "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"> <head> <title>panel</title> <base href=\"http://127.0.0.1:80/rw/panel/ctrlstate/\"/> </head> <body>  <div class=\"state\"> <a href=\"\" rel=\"self\"></a><a href=\"?action=show\" rel=\"action\"></a><ul> <li class=\"pnl-ctrlstate\" title=\"ctrlstate\"><span class=\"ctrlstate\">guardstop</span> </li> </ul></div> </body></html>"
+}

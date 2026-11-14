@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/rapid/symbol/data/RAPID/T_ROB1/NoModulo/noSimbolo",
+  "status": 400,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "417"
+  },
+  "note": "Symbol not found.",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>rw</title><base href=\"http://127.0.0.1:80/\"/></head><body><div class=\"status\"><span class=\"code\">-1073414146</span><span class=\"msg\">C:\\BUILDAGENTS\\SEABB-IS-13906.1\\_work\\76\\s\\RW\\Areas\\RobApi2\\Components\\rws_rapid\\rws_resource_rapid_symbol_data.cpp[286] Symbol not found code:-1073414146 icode:-1</span></div></body></html>"
+}

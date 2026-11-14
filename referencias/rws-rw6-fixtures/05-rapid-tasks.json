@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/rapid/tasks",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "573"
+  },
+  "note": "",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>rapid</title><base href=\"http://127.0.0.1:80/rw/rapid/\"/></head><body><div class=\"state\"><a href=\"tasks\" rel=\"self\"></a><a href=\"tasks?action=show\" rel=\"action\"></a><ul><li class=\"rap-task-li\" title=\"T_ROB1\"> <a href=\"tasks/T_ROB1\" rel=\"self\"></a> <span class=\"name\">T_ROB1</span> <span class=\"type\">norm</span><span class=\"taskstate\">link</span><span class=\"excstate\">read</span> <span class=\"active\">On</span><span class=\"motiontask\">TRUE</span></li>  </ul></div></body></html>"
+}

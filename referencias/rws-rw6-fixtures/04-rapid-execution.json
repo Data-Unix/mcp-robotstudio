@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/rapid/execution",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "422"
+  },
+  "note": "",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>rapid</title><base href=\"http://127.0.0.1:80/rw/rapid/\"/></head><body><div class=\"state\"><a href=\"execution\" rel=\"self\"></a><a href=\"execution?action=show\" rel=\"action\"></a> <ul><li class=\"rap-execution\" title=\"execution\"><span class=\"ctrlexecstate\">stopped</span><span class=\"cycle\">forever</span></li></ul></div></body></html>"
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Opciones — MCP-ROBOTSTUDIO RWS Monitor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="options-page">
+    <header>
+      <div class="title-row">
+        <h1>Configuracion RWS (Solo lectura)</h1>
+        <span class="badge badge-readonly">Digest MD5 · Sin telemetria</span>
+      </div>
+      <div class="toolbar">
+        <a class="btn-link" href="panel.html" id="back-to-panel">Volver al panel</a>
+      </div>
+    </header>
+
+    <div id="remote-http-warning" class="banner banner-warn hidden">
+      Atencion: ha indicado un host distinto de loopback (127.0.0.1 / localhost). RWS 1.0 en IRC5/RobotWare 6 usa HTTP sin TLS en puerto 80; los datos consultados circulan por su red local. Chrome pedira permiso explicito solo para ese origen.
+    </div>
+
+    <div id="status-banner" class="banner hidden" role="status"></div>
+
+    <form id="options-form" class="card">
+      <div class="form-group">
+        <label for="opt-host">Host o IP del controlador</label>
+        <input type="text" id="opt-host" required value="127.0.0.1" placeholder="127.0.0.1" />
+        <div class="help-text">
+          Para controlador virtual local use <code>127.0.0.1</code> o <code>localhost</code>.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="opt-port">Puerto RWS HTTP</label>
+        <input type="number" id="opt-port" min="1" max="65535" required value="80" />
+        <div class="help-text">
+          En RobotStudio Virtual Controller suele ser 80 u otro puerto asignado a <code>RobVC</code>.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="opt-task">Tarea RAPID por defecto</label>
+        <input type="text" id="opt-task" required value="T_ROB1" />
+      </div>
+
+      <div class="form-group">
+        <label for="opt-user">Usuario RWS (Digest MD5)</label>
+        <input type="text" id="opt-user" required value="Default User" />
+      </div>
+
+      <div class="form-group">
+        <label for="opt-pass">Contrasena RWS (solo sesion en memoria)</label>
+        <input type="password" id="opt-pass" value="robotics" autocomplete="off" />
+        <div class="help-text">
+          Nunca se guarda en disco ni en <code>chrome.storage.local</code>: se guarda unicamente en <code>chrome.storage.session</code> (acceso restringido a contextos confiables de la extension) y se descarta al cerrar el navegador. Esta extension rechaza autenticacion HTTP Basic.
+        </div>
+      </div>
+
+      <div class="row-inline" style="margin-top: 12px; margin-bottom: 0;">
+        <button type="submit" class="primary" id="save-btn">Guardar opciones</button>
+        <button type="button" id="test-btn">Probar conexion (solo lectura)</button>
+      </div>
+    </form>
+
+    <section class="card">
+      <h2>Como averiguar el puerto en Windows (PowerShell)</h2>
+      <pre>$ids = (Get-Process RobVC).Id
+Get-NetTCPConnection -State Listen | Where-Object { $ids -contains $_.OwningProcess }</pre>
+    </section>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

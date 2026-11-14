@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/iosystem/signals?start=0&limit=5",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "1785"
+  },
+  "note": "Paginated list.",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>io</title><base href=\"http://127.0.0.1:80/rw/iosystem/\"/></head><body><div class=\"state\"><a href=\"signals\" rel=\"self\"></a><a href=\"signals?action=show\" rel=\"action\"></a><a href=\"signals?start=5&amp;limit=5\" rel=\"next\"></a><ul><li class=\"ios-signal-li\" title=\"Local/DRV_1/DRV1TESTE2\"><a href=\"signals/Local/DRV_1/DRV1TESTE2\" rel=\"self\"></a><span class=\"name\">DRV1TESTE2</span><span class=\"type\">DO</span><span class=\"category\">safety</span><span class=\"lvalue\">0</span><span class=\"lstate\">not simulated</span></li><li class=\"ios-signal-li\" title=\"Local/DRV_1/DRV1BRAKE\"><a href=\"signals/Local/DRV_1/DRV1BRAKE\" rel=\"self\"></a><span class=\"name\">DRV1BRAKE</span><span class=\"type\">DO</span><span class=\"category\">safety</span><span class=\"lvalue\">0</span><span class=\"lstate\">not simulated</span></li><li class=\"ios-signal-li\" title=\"Local/DRV_1/DRV1CHAIN2\"><a href=\"signals/Local/DRV_1/DRV1CHAIN2\" rel=\"self\"></a><span class=\"name\">DRV1CHAIN2</span><span class=\"type\">DO</span><span class=\"category\">safety</span><span class=\"lvalue\">0</span><span class=\"lstate\">not simulated</span></li><li class=\"ios-signal-li\" title=\"Local/DRV_1/DRV1CHAIN1\"><a href=\"signals/Local/DRV_1/DRV1CHAIN1\" rel=\"self\"></a><span class=\"name\">DRV1CHAIN1</span><span class=\"type\">DO</span><span class=\"category\">safety</span><span class=\"lvalue\">0</span><span class=\"lstate\">not simulated</span></li><li class=\"ios-signal-li\" title=\"Local/DRV_1/DRV1BRAKEOK\"><a href=\"signals/Local/DRV_1/DRV1BRAKEOK\" rel=\"self\"></a><span class=\"name\">DRV1BRAKEOK</span><span class=\"type\">DI</span><span class=\"category\">safety</span><span class=\"lvalue\">0</span><span class=\"lstate\">not simulated</span></li></ul></div></body></html>"
+}

@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/system",
+  "status": 401,
+  "headers": {
+    "content-type": "text/plain",
+    "content-length": "29",
+    "www-authenticate": "Digest realm=\"validusers@robapi.abb\", domain=\"/\", qop=\"auth\", nonce=\"<redacted>\", opaque=\"<redacted>\", algorithm=\"MD5\", stale=\"FALSE\""
+  },
+  "note": "First request without credentials: Digest challenge (qop=auth).",
+  "body": "Access Denied. Login required"
+}

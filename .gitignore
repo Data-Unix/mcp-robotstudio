@@ -1,0 +1,79 @@
+# =============================================================================
+# Defense-in-depth: academic/private folders must NEVER be committed here
+# =============================================================================
+teoria/
+practicas/
+agentes/
+.claude/
+originales_NO_SUBIR/
+CLAUDE.md
+CLAUDE.local.md
+.privacy-blocklist.txt
+
+# =============================================================================
+# ABB RobotStudio stations, backups, controller images, licenses & documents
+# =============================================================================
+*.rspag
+*.rsstnx
+*.rsproj
+*.rslib
+*.rsuser
+*.rsautosave
+*.rspak
+*.sat
+*.rlf
+key.id
+program.id
+Station/
+Controller Data/
+Virtual Controllers/
+station*/
+*.pdf
+*.doc
+*.docx
+*.odt
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+
+# =============================================================================
+# Credentials, tokens, session cookies & environment files
+# =============================================================================
+.env
+.env.*
+*.pem
+*.key
+.rws_cookies*
+
+# =============================================================================
+# Node.js / TypeScript / Playwright artifacts
+# =============================================================================
+node_modules/
+packages/*/dist/
+packages/chrome-extension/.playwright-profile/
+*.tgz
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
+
+# =============================================================================
+# Build outputs, IDE files, OS metadata & Python caches
+# =============================================================================
+build/
+out/
+cmake-build-*/
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.user
+Thumbs.db
+Desktop.ini
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+.venv/

@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/mastership",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "531"
+  },
+  "note": "",
+  "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"> <head> <title>MasterShip</title> <base href=\"http://127.0.0.1:80/rw/mastership/\"/> </head> <body>  <div class=\"state\"> <a href=\"\" rel=\"self\"></a> <a href=\"?action=show\" rel=\"action\"></a><ul> <li class=\"msh-resource-li\" title=\"cfg\"><a href=\"cfg\" rel=\"self\"></a></li><li class=\"msh-resource-li\" title=\"motion\"><a href=\"motion\" rel=\"self\"></a></li><li class=\"msh-resource-li\" title=\"rapid\"><a href=\"rapid\" rel=\"self\"></a></li></ul></div> </body></html>"
+}

@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/rapid/modules?task=T_ROB1",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "493"
+  },
+  "note": "Valid module list route in RW6.",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>rapid</title><base href=\"http://127.0.0.1:80/rw/rapid/\"/></head><body><div class=\"state\"><a href=\"modules?task=T_ROB1\" rel=\"self\"></a><ul><li class=\"rap-module-info-li\" title=\"T_ROB1/user\"><span class=\"name\">user</span><span class=\"type\">SysMod</span></li><li class=\"rap-module-info-li\" title=\"T_ROB1/BASE\"><span class=\"name\">BASE</span><span class=\"type\">SysMod</span></li></ul></div></body></html>"
+}

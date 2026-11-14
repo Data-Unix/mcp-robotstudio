@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/iosystem/signals/DRV1TESTE2",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "886"
+  },
+  "note": "",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>io</title><base href=\"http://127.0.0.1:80/rw/iosystem/\"/></head><body><div class=\"state\"><a href=\"signals/Local/DRV_1/DRV1TESTE2\" rel=\"self\"></a><a href=\"signals/Local/DRV_1/DRV1TESTE2?action=show\" rel=\"action\"></a> <ul><li class=\"ios-signal\" title=\"Local/DRV_1/DRV1TESTE2\"> <a href=\"devices/DRV_1\" rel=\"device\"></a> <span class=\"name\">DRV1TESTE2</span> <span class=\"type\">DO</span> <span class=\"category\">safety</span> <span class=\"lvalue\">0</span> <span class=\"lstate\">not simulated</span> <span class=\"unitnm\">DRV_1</span><span class=\"phstate\">valid</span><span class=\"pvalue\">0</span> <span class=\"ltime-sec\">0</span> <span class=\"ltime-microsec\">0</span> <span class=\"ptime-sec\">0</span> <span class=\"ptime-microsec\">0</span> <span class=\"quality\">1</span> </li></ul></div></body></html>"
+}

@@ -1,0 +1,66 @@
+name: CI - Node Packages & Privacy Gate
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-packages:
+    name: Node ${{ matrix.node-version }} (mcp-robotstudio + chrome-extension)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [ 20, 22 ]
+
+    defaults:
+      run:
+        working-directory: packages
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python (privacy gate & .rspag self-test)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: packages/package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Install Chromium for MV3 Chrome extension E2E
+        run: npx playwright install --with-deps chromium
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Lint TypeScript and JavaScript
+        run: npm run lint
+
+      - name: Typecheck packages
+        run: npm run typecheck
+
+      - name: Run unit, integration, MCP E2E, and Chrome extension E2E tests
+        run: npm test
+
+      - name: Run privacy gate and .rspag anonymizer self-test
+        run: python3 ../scripts/check_privacy.py --self-test
+
+      - name: Verify npm tarball contents and production dependency audit
+        run: |
+          npm pack --dry-run -w mcp-robotstudio
+          npm audit --omit=dev --audit-level=high

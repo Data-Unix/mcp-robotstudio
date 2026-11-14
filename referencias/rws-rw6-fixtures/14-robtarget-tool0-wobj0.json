@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/motionsystem/mechunits/ROB_1/robtarget?tool=tool0&wobj=wobj0&coordinate=Wobj",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "872"
+  },
+  "note": "",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>motionsystem</title><base href=\"http://127.0.0.1:80/rw/motionsystem/mechunits/ROB_1/robtarget/\"/></head><body><div class=\"state\"><a href= \"\" rel=\"self\"/> <ul> <li class=\"ms-robtargets\" title=\"ROB_1\"> <span class=\"x\">374</span> <span class=\"y\">0</span> <span class=\"z\">630</span> <span class=\"q1\">0.7071068</span> <span class=\"q2\">0</span> <span class=\"q3\">0.7071068</span> <span class=\"q4\">0</span> <span class=\"cf1\">0</span> <span class=\"cf4\">0</span> <span class=\"cf6\">0</span> <span class=\"cfx\">0</span> <span class=\"eax_a\">8.999999e+09</span> <span class=\"eax_b\">8.999999e+09</span> <span class=\"eax_c\">8.999999e+09</span> <span class=\"eax_d\">8.999999e+09</span> <span class=\"eax_e\">8.999999e+09</span> <span class=\"eax_f\">8.999999e+09</span> </li> </ul></div></body></html>"
+}

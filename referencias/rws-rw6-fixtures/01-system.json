@@ -1,0 +1,11 @@
+{
+  "request": "GET /rw/system",
+  "status": 200,
+  "headers": {
+    "set-cookie": "ABBCX=<redacted>; path=/; domain=127.0.0.1; httponly",
+    "content-type": "application/xhtml+xml",
+    "content-length": "1725"
+  },
+  "note": "",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>system</title><base href=\"http://127.0.0.1:80/rw/system/\"/></head><body><div class=\"state\"><a href=\"\" rel=\"self\"></a><ul> <li class=\"sys-system-li\" title=\"system\"> <span class=\"name\">IRB120_3_58</span> <span class=\"rwversion\">6.16.3007</span> <span class=\"sysid\">{00000000-0000-0000-0000-000000000000}</span> <span class=\"starttm\">2026-11-14 T 22:33:10</span> <span class=\"rwversionname\">6.16.03.00</span> </li> <li class=\"sys-options-li\" title=\"options\"> <a href=\"options\" rel=\"self\"></a> <ul> <li class=\"sys-option-li\" title=\"0\"> <span class=\"option\">RobotWare Base</span> </li> <li class=\"sys-option-li\" title=\"1\"> <span class=\"option\">English</span> </li> <li class=\"sys-option-li\" title=\"2\"> <span class=\"option\">709-1 DeviceNet Master/Slave</span> </li> <li class=\"sys-option-li\" title=\"3\"> <span class=\"option\">Drive System IRB 120/140/260/360/910SC/1200/1400/1520/1600/1660ID</span> </li> <li class=\"sys-option-li\" title=\"4\"> <span class=\"option\">ADU-790A in position X3</span> </li> <li class=\"sys-option-li\" title=\"5\"> <span class=\"option\">ADU-790A in position Y3</span> </li> <li class=\"sys-option-li\" title=\"6\"> <span class=\"option\">ADU-790A in position Z3</span> </li> <li class=\"sys-option-li\" title=\"7\"> <span class=\"option\">Axis Calibration</span> </li> <li class=\"sys-option-li\" title=\"8\"> <span class=\"option\">IRB 120-3/0.6</span> </li> </ul> </li><li class=\"sys-energy-li\" title=\"energy\"> <a href=\"energy\" rel=\"self\"/> </li><li class=\"sys-license-li\" title=\"license\"> <a href=\"license\" rel=\"self\"/> </li><li class=\"sys-products-li\" title=\"products\"> <a href=\"products\" rel=\"self\"/> </li></ul></div></body></html>"
+}
