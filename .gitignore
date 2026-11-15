@@ -44,6 +44,8 @@ station*/
 .env.*
 *.pem
 *.key
+!referencias/rws-test-tls/test-cert.pem
+!referencias/rws-test-tls/test-key.pem
 .rws_cookies*
 
 # =============================================================================
