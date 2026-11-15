@@ -17,9 +17,11 @@ describe("Chrome Extension MV3 E2E against FakeRwsServer", () => {
   let userDataDir: string;
 
   beforeAll(async () => {
-    execFileSync(process.execPath, [path.join(EXTENSION_DIR, "build.mjs")], {
-      stdio: "pipe",
-    });
+    if (!fs.existsSync(path.join(DIST_DIR, "background.js"))) {
+      execFileSync(process.execPath, [path.join(EXTENSION_DIR, "build.mjs")], {
+        stdio: "pipe",
+      });
+    }
     fs.mkdirSync(path.dirname(SCREENSHOT_PATH), { recursive: true });
 
     server = new FakeRwsServer();

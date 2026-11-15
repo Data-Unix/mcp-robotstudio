@@ -22,9 +22,11 @@ function listFilesRecursive(dir: string): string[] {
 
 describe("Chrome Extension MV3 security & bundle audit (dist/)", () => {
   beforeAll(() => {
-    execFileSync(process.execPath, [path.join(EXTENSION_DIR, "build.mjs")], {
-      stdio: "pipe",
-    });
+    if (!fs.existsSync(path.join(DIST_DIR, "background.js"))) {
+      execFileSync(process.execPath, [path.join(EXTENSION_DIR, "build.mjs")], {
+        stdio: "pipe",
+      });
+    }
   });
 
   it("enforces strict least-privilege Manifest V3 metadata", () => {
