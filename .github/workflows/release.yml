@@ -115,7 +115,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ needs.verify.outputs.version }}
-        run: npm publish "release/mcp-robotstudio-$VERSION.tgz" --provenance --access public
+        run: npm publish "./release/mcp-robotstudio-$VERSION.tgz" --provenance --access public
 
       - name: Create the GitHub Release with tarball, Chrome zip and SHA256SUMS
         env:
