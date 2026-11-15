@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Opciones — MCP-ROBOTSTUDIO RWS Monitor</title>
+    <title>Opciones - MCP-ROBOTSTUDIO</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="options-page">
     <header>
       <div class="title-row">
-        <h1>Configuracion RWS (Solo lectura)</h1>
-        <span class="badge badge-readonly">Digest MD5 · Sin telemetria</span>
+        <h1>Configuracion RWS</h1>
+        <span class="badge badge-readonly">Digest MD5 / Basic solo sobre TLS / Sin telemetria</span>
       </div>
       <div class="toolbar">
         <a class="btn-link" href="panel.html" id="back-to-panel">Volver al panel</a>
@@ -58,11 +58,41 @@
         </div>
       </div>
 
+      <div class="form-group">
+        <label for="opt-dialect">Dialecto RWS</label>
+        <select id="opt-dialect">
+          <option value="rws1">RWS 1.0 - IRC5 / RobotWare 6 (HTTP, Digest MD5)</option>
+          <option value="rws2">RWS 2.0 - OmniCore / RobotWare 7-8 (HTTPS, Basic sobre TLS)</option>
+        </select>
+        <div class="help-text">RWS 2.0 usa el certificado autofirmado del controlador: abra una vez la direccion HTTPS del controlador en una pestana y acepte el certificado. Basic nunca se envia por HTTP.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="opt-fleet">Flota (PRO): una celda por linea <code>nombre host puerto rws1|rws2</code></label>
+        <textarea id="opt-fleet" rows="3" spellcheck="false" placeholder="celda2 192.168.125.1 80 rws1"></textarea>
+      </div>
+
       <div class="row-inline" style="margin-top: 12px; margin-bottom: 0;">
         <button type="submit" class="primary" id="save-btn">Guardar opciones</button>
-        <button type="button" id="test-btn">Probar conexion (solo lectura)</button>
+        <button type="button" id="test-btn">Probar conexion</button>
       </div>
     </form>
+
+    <section class="card">
+      <h2>Modo escritura de esta sesion</h2>
+      <label class="check"><input type="checkbox" id="opt-write" /> Permitir escrituras PRO (SpeedRatio, recetas PERS, carga de modulos, backup)</label>
+      <div class="help-text">Desactivado por defecto. Se guarda solo en <code>chrome.storage.session</code> y se borra al cerrar el navegador. Cada escritura pasa antes por las comprobaciones del escudo.</div>
+    </section>
+
+    <section class="card">
+      <h2>Suscripcion MCP-ROBOTSTUDIO PRO</h2>
+      <div class="row-inline">
+        <input type="text" id="opt-license" placeholder="Clave de licencia" aria-label="Clave de licencia" />
+        <button type="button" id="license-btn">Activar</button>
+        <button type="button" id="license-off-btn">Quitar</button>
+      </div>
+      <div class="help-text" id="license-info"></div>
+    </section>
 
     <section class="card">
       <h2>Como averiguar el puerto en Windows (PowerShell)</h2>

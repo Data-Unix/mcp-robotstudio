@@ -42,6 +42,9 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
+      - name: Verify lockstep version (npm package, GitHub release, Chrome extension)
+        run: python3 ../scripts/sync_version.py --check
+
       - name: Install Chromium for MV3 Chrome extension E2E
         run: npx playwright install --with-deps chromium
 
@@ -64,3 +67,8 @@ jobs:
         run: |
           npm pack --dry-run -w mcp-robotstudio
           npm audit --omit=dev --audit-level=high
+
+      - name: Build the Chrome Web Store zip and re-check the version inside it
+        run: |
+          npm run pack:zip -w @mcp-robotstudio/chrome-extension
+          python3 ../scripts/sync_version.py --check

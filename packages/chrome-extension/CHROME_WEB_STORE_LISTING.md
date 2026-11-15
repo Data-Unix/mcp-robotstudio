@@ -1,129 +1,102 @@
-# Guia y Ficha SEO para Publicar en Chrome Web Store — MCP-ROBOTSTUDIO RWS Monitor
+# Ficha de Chrome Web Store: MCP-ROBOTSTUDIO v0.2.0
 
-Esta guia contiene **todos los artefactos, textos y justificaciones exactas** requeridos en el **Chrome Web Store Developer Dashboard** (cuenta `Data-Unix`) vinculados al repositorio publico `https://github.com/Data-Unix/mcp-robotstudio`.
+Textos, justificaciones e inventario de artefactos para el Developer Dashboard (cuenta `Data-Unix`, repositorio público `https://github.com/Data-Unix/mcp-robotstudio`).
 
----
-
-## 1. Artefactos locales listos para subir
-
-Antes de entrar al panel de Chrome Web Store, genera/actualiza los artefactos con:
+## 1. Artefactos
 
 ```powershell
 cd packages
-npm run test
+npm ci
+npm run build
+npm test
 npm run pack:zip -w @mcp-robotstudio/chrome-extension
+npm run verify:zip -w @mcp-robotstudio/chrome-extension
+python ../scripts/sync_version.py --check
 ```
 
-Archivos generados y listos:
-- **Paquete ZIP (pestaña *Package*):** `packages/chrome-extension/mcp-robotstudio-rws-monitor.zip` (contiene `manifest.json` en la raiz del ZIP + bundle MV3 + iconos).
-- **Icono 128x128 px (pestaña *Store listing*):** `packages/chrome-extension/dist/icons/icon128.png`.
-- **Captura principal 1280x800 px (pestaña *Store listing*):** `packages/chrome-extension/docs/cws-screenshot-1280x800.png` (y captura vertical adicional `docs/panel-screenshot.png` si deseas subirla tras probarla).
+| Artefacto | Ruta | Estado |
+|---|---|---|
+| Paquete | `packages/chrome-extension/mcp-robotstudio-rws-monitor.zip` (`manifest.json` en la raíz, versión 0.2.0) | generado por `pack:zip` |
+| Icono 128x128 | `packages/chrome-extension/dist/icons/icon128.png` | generado por `build` |
+| Captura 1 (1280x800) | `docs/cws-01-telemetria-cinematica-1280x800.png` | en vivo, IRB120_3_58 / RW 6.16 |
+| Captura 2 (1280x800) | `docs/cws-02-forense-diff-1280x800.png` | en vivo |
+| Captura 3 (1280x800) | `docs/cws-03-osciloscopio-flota-1280x800.png` | en vivo |
+| Captura 4 (1280x800) | `docs/cws-04-alcance-recetas-1280x800.png` | en vivo |
+| Captura 5 (1280x800) | `docs/cws-05-estudio-practicas-1280x800.png` | en vivo |
+| Vídeo promocional | `docs/demo-mcp-robotstudio-pro.mp4` (H.264, 1280x720, 30 fps, 42,5 s, sin audio) | en vivo; el Dashboard pide una URL de YouTube, hay que subirlo allí |
 
----
+`verify:zip` comprueba los 14 ficheros requeridos, la versión, la CSP y la sintaxis de cada JS, y que el paquete no lleve comentarios, emojis, URLs remotas, claves privadas, rutas de usuario, correos ni rastros de herramientas de IA. La versión de tienda de `knowledge.json` lleva solo el checklist de entrega, sin rutas internas ni resúmenes de incidentes.
 
-## 2. Pestaña *Store listing* (Ficha SEO y metadatos)
+Las cinco capturas son el viewport de la extensión (sin escritorio, barra de tareas ni notificaciones) y solo contienen los chunks PNG `IHDR`, `IDAT` e `IEND`.
 
-- **Nombre de la extension (*Name* — heredado de `manifest.json`):**
-  `MCP-ROBOTSTUDIO RWS Monitor`
-- **Resumen corto (*Summary*, max. 132 caracteres — heredado de `manifest.json`):**
-  `Monitor de solo lectura para ABB RobotStudio / RobotWare 6 via RWS 1.0 (Digest MD5): estado, modulos, senales, eventos y simbolos.`
-  *(Alternativa en ingles, 128 caracteres: `Read-only monitor for ABB RobotStudio & RobotWare 6 via RWS 1.0 (Digest MD5): controller state, RAPID modules, signals and elog.`)*
-- **Categoria (*Category*):** `Developer Tools` (`Herramientas para desarrolladores`)
-- **Idioma principal (*Language*):** `Spanish` (o `English` si prefieres la ficha principal en ingles)
-- **URL oficial / Sitio web (*Official URL / Homepage*):** `https://github.com/Data-Unix/mcp-robotstudio`
-- **URL de soporte (*Support URL*):** `https://github.com/Data-Unix/mcp-robotstudio/issues`
+El vídeo junta dos grabaciones simultáneas: el panel (screencast CDP de `scripts/video-live.mjs`, solo el viewport) y la región de la vista 3D de RobotStudio, sin cinta, árbol de estación ni barra de tareas. Muestra el pulso de `ARRAY` en el simulador de E/S y la TRAP `recorrer_array` (StorePath, recorrido, RestoPath) con los tiempos medidos por RWS. Sin pistas de audio ni etiquetas de codificador o autor.
 
-### Descripcion detallada optimizada para SEO (copiar y pegar)
+## 2. Store listing
 
-#### Version en ingles (recomendada para maximo alcance en busquedas globales)
+- **Nombre:** `MCP-ROBOTSTUDIO`
+- **Resumen (manifest, 132 car. máx.):** `Instrumentacion para ABB RobotStudio e IRC5/OmniCore via RWS 1.0 y 2.0: telemetria, forense, osciloscopio, alcance y practicas.`
+- **Categoría:** Developer Tools
+- **Idioma:** español
+- **Web:** `https://github.com/Data-Unix/mcp-robotstudio`
+- **Soporte:** `https://github.com/Data-Unix/mcp-robotstudio/issues`
+
+### Descripción (español)
+
 ```text
-MCP-ROBOTSTUDIO RWS Monitor is a strictly READ-ONLY Manifest V3 Chrome Side Panel and Popup inspector for ABB RobotStudio Virtual Controllers and IRC5 industrial robots running RobotWare 6 (Robot Web Services / RWS 1.0).
+MCP-ROBOTSTUDIO es un panel de instrumentación para controladores ABB: controladores virtuales de RobotStudio y robots IRC5 (RobotWare 6, RWS 1.0) u OmniCore (RobotWare 7-8, RWS 2.0). Es la extensión del servidor MCP de código abierto mcp-robotstudio.
 
-Built as the companion browser monitor for the open-source mcp-robotstudio TypeScript MCP server (Apache-2.0), it connects directly over HTTP Digest MD5 (qop="auth") to inspect live controller telemetry without risk of modifying RAPID code, writing signals, or moving robot axes.
+Cinco pestañas:
 
-KEY CAPABILITIES (100% READ-ONLY)
-• Controller & Execution Overview: robot system name, RobotWare version (e.g. 6.16), motor status (ctrlstate), operating mode (opmode: Auto / Manual Reduced Speed), RAPID execution state (running / stopped), cycle mode, and active tasks (T_ROB1).
-• Live Motion Telemetry: joint targets (J1..J6 in degrees plus external axes) and Cartesian TCP robtarget coordinates (X, Y, Z, quaternion orientation, and configuration).
-• RAPID Modules Inspector: lists loaded PROGMOD and SYSMOD modules via RobotWare 6 compliant endpoints (/rw/rapid/modules?task=...).
-• Filterable I/O Signals Viewer: browse /rw/iosystem/signals with real-time substring search (DI, DO, GI, GO, DRV1, etc.) and live logic states.
-• Controller Event Log: inspect the latest /rw/elog entries with domain, severity type, event code, timestamp, and description.
-• RAPID Symbol Reader: read any PERS, VAR, or CONST RAPID variable (such as BASE/tool0) without altering program execution.
+01 TELEMETRIA Y CINEMATICA
+Gratis: un controlador, motores, modo, ejecución, J1..J6 y TCP en cuaternión (tool0/wobj0).
+PRO: puntero de programa en vivo (módulo, rutina, línea), aviso de SpeedRatio por debajo del 100 % en AUTO con la penalización de ciclo y botón "Fijar 100%", barras de límites J1..J6, singularidad de muñeca (|J5| < 3 grados), codo y manipulabilidad, conversor OrientZYX / EulerZYX / NOrient / PoseMult.
 
-SECURITY & PRIVACY BY DESIGN
-• Strictly read-only: zero write buttons, zero POST/PUT execution calls, and zero motion endpoints in the compiled extension bundle.
-• RFC 7616 HTTP Digest MD5 (qop="auth"): rejects insecure HTTP Basic challenges so credentials are never transmitted in base64 cleartext.
-• Session cookie reuse (ABBCX): prevents exhausting the RobotWare 6 limit of 70 concurrent RWS sessions.
-• Session-only credential memory: connection targets reside locally in chrome.storage.local, while your optional RWS password and session cookie remain strictly in RAM via chrome.storage.session (TRUSTED_CONTEXTS) and are cleared when the browser closes.
-• Optional LAN consent: only loopback (127.0.0.1 / localhost) is enabled by default; LAN IRC5 controller IPs require explicit runtime permission via chrome.permissions.request().
-• Zero telemetry, zero analytics, zero remote code, strict MV3 Content Security Policy.
+02 FORENSE Y DIFF
+Gratis: últimos 5 eventos del registro y aviso de parada con error.
+PRO: caja negra forense (línea del PP y código alrededor, señales, pose, eventos y diagnóstico de incidentes conocidos; exporta JSON y Markdown), diff línea a línea entre el módulo en la RAM del controlador y un Golden Master, validador RAPID offline y carga de módulos que detecta el falso 204 de RobotWare 6.
 
-Source code, documentation, and MCP stdio server CLI:
-https://github.com/Data-Unix/mcp-robotstudio
+03 OSCILOSCOPIO Y FLOTA
+Gratis: lista de señales con filtro.
+PRO: osciloscopio de hasta 8 señales digitales, TCP X/Y/Z y variables PERS con marcas de tiempo en ms; certificador del retorno StorePath/RestoPath (error en mm, CSV y Markdown); tabla de varias celdas (modo, SpeedRatio, sincronización SMB); backup a TEMP.
+
+04 ALCANCE Y RECETAS
+Gratis: lector de símbolos RAPID y conversor Euler / cuaternión.
+PRO: sonda de alcance sin mover el robot (cinemática inversa del IRB 120 con barrido de inclinaciones y Offs), captura de la pose actual como robtarget y editor de recetas PERS que bloquea saltos mayores que delta_max, cuaterniones no unitarios y puntos fuera de alcance antes de escribir.
+
+05 ESTUDIO DE PRACTICAS
+Gratis: lista de verificación de entrega y diagnóstico de un .rspag (system.guid, rutas personales, metadatos de imágenes) en un Web Worker local.
+PRO: asistente que audita el controlador (señales, tooldata de CalibData), valida alcance y genera el módulo .mod con variables PERS testigo y el README con la tabla de verificación; anonimiza el .rspag y extrae Preview.png sin metadatos.
+
+Seguridad:
+- Lectura por defecto. Las escrituras exigen la suscripción PRO y además activar el modo escritura de la sesión en Opciones (se borra al cerrar el navegador). La extensión nunca arranca, para ni mueve el programa.
+- RWS 1.0 con HTTP Digest MD5; Basic solo se acepta sobre HTTPS (RWS 2.0).
+- Contraseña y cookies de sesión solo en chrome.storage.session.
+- Sin telemetría, sin analítica, sin código remoto.
 ```
 
-#### Version en espanol
-```text
-MCP-ROBOTSTUDIO RWS Monitor es un panel lateral (Side Panel) y popup ESTRICTAMENTE DE SOLO LECTURA para supervisar controladores virtuales de ABB RobotStudio y robots industriales IRC5 con RobotWare 6 mediante Robot Web Services (RWS 1.0).
+### Modelo de suscripción
 
-Forma parte del ecosistema abierto mcp-robotstudio (servidor MCP en TypeScript y cliente RWS real bajo licencia Apache-2.0) y permite consultar la telemetria del robot en tiempo real sin ningun boton ni endpoint capaz de modificar codigo RAPID, escribir senales ni mover el robot.
+Una única suscripción, MCP-ROBOTSTUDIO PRO. Las funciones PRO se marcan en la interfaz y muestran el aviso de activación solo cuando se intentan usar. La licencia es un token firmado (ECDSA P-256) que se verifica localmente; la extensión no contacta con ningún servidor para validarla. El enlace de pago (`checkoutUrl`) está sin configurar en esta versión: hay que declararlo en el panel antes de cobrar.
 
-FUNCIONALIDADES PRINCIPALES (100 % SOLO LECTURA)
-• Estado del controlador: nombre del sistema, version de RobotWare (p. ej. 6.16), estado de motores, modo de operacion, estado de ejecucion RAPID y tareas activas (T_ROB1).
-• Telemetria de movimiento: posicion articular (J1..J6 y ejes externos) y posicion cartesiana TCP robtarget (X, Y, Z, cuaternion).
-• Modulos RAPID: listado de modulos cargados usando las rutas verificadas de RobotWare 6 (/rw/rapid/modules?task=...).
-• Senales de E/S con filtro instantaneo: consulta senales digitales y analogicas con busqueda por subcadena.
-• Registro de eventos (Event Log): ultimos avisos y errores del controlador con codigo, tipo y fecha.
-• Lector de simbolos RAPID: consulta variables/constantes/persistentes (p. ej. BASE/tool0) de forma segura.
+## 3. Privacy practices
 
-SEGURIDAD Y PRIVACIDAD POR DISENO
-• Cero escritura: sin botones de arranque/parada, carga de modulos ni modificacion de variables.
-• Autenticacion HTTP Digest MD5 (qop="auth") con rechazo de HTTP Basic.
-• Reutilizacion de cookie de sesion ABBCX para evitar el error "Too many sessions 70/70" en RobotWare 6.
-• Contrasena y cookie unicamente en RAM (chrome.storage.session con TRUSTED_CONTEXTS); nunca en disco ni en la nube.
-• Solo localhost/127.0.0.1 por defecto; acceso a IPs LAN de IRC5 unicamente bajo permiso explicito en tiempo de ejecucion.
-• Cero telemetria, cero analitica y cero codigo remoto.
-```
+- **Privacy policy URL:** `https://github.com/Data-Unix/mcp-robotstudio/blob/main/packages/chrome-extension/PRIVACY_POLICY.md`
+- **Single purpose:** Inspect and operate ABB robot controllers (RobotStudio virtual controllers, IRC5, OmniCore) over Robot Web Services from a side panel.
+- **Justificación de permisos:**
+  - `storage`: parámetros de conexión, flota y token de licencia en `chrome.storage.local`; contraseña, cookies de sesión y modo escritura solo en `chrome.storage.session`.
+  - `sidePanel`: mantener el panel de instrumentación junto a la página de trabajo.
+  - `offscreen`: documento offscreen que mantiene la suscripción RWS y el muestreo del TCP para el osciloscopio más allá del ciclo de vida del service worker, y analiza los documentos de eventos XHTML con DOMParser.
+  - Hosts `http://127.0.0.1/*`, `http://localhost/*`; opcionales `http://*/*`, `https://*/*`: peticiones RWS al controlador que el usuario configura; cualquier host que no sea loopback se pide con `chrome.permissions.request()`.
+- **Código remoto:** no. Todo el JavaScript va empaquetado; CSP `script-src 'self'; object-src 'self'; worker-src 'self'; base-uri 'none'; frame-ancestors 'none';`.
+- **Datos:** no se recopila ni se transmite ningún dato del usuario.
 
----
-
-## 3. Pestaña *Privacy practices* (Privacidad y permisos)
-
-- **Privacy policy URL:**
-  `https://github.com/Data-Unix/mcp-robotstudio/blob/main/packages/chrome-extension/PRIVACY_POLICY.md`
-
-- **Single purpose description:**
-  > Read-only monitor that inspects ABB RobotStudio / RobotWare 6 controller status, RAPID modules, I/O signals, event log entries, and RAPID symbol values over Robot Web Services (RWS 1.0 HTTP Digest).
-
-- **Permission justifications:**
-  - **`storage`:**
-    > Stores non-sensitive connection parameters (host, port, RAPID task, username) locally in `chrome.storage.local` and keeps the transient RWS session cookie and optional session password exclusively in RAM via `chrome.storage.session` (`TRUSTED_CONTEXTS`).
-  - **`sidePanel`:**
-    > Allows robotics engineers and developers to keep the read-only controller telemetry monitor docked beside their browser workspace in Chrome's Side Panel.
-  - **Host permissions (`http://127.0.0.1/*`, `http://localhost/*`, optional `http://*/*`):**
-    > Required for the extension service worker to send direct read-only RWS 1.0 HTTP Digest `GET` requests to local ABB RobotStudio Virtual Controllers (`127.0.0.1`/`localhost` by default) or an explicit LAN IRC5 controller IP authorized interactively by the user via `chrome.permissions.request()`.
-  - **Are you using remote code?**
-    > **No**, I am not using remote code. All JavaScript, HTML, and CSS are bundled locally inside the extension under strict MV3 CSP (`script-src 'self'; object-src 'self'; base-uri 'none'; frame-ancestors 'none';`).
-
-- **Data usage checkboxes:**
-  - Deja **todas** las casillas de recopilacion de datos desmarcadas y selecciona la certificacion de que la extension no recopila ni transmite datos de usuario.
-
----
-
-## 4. Pestaña *Account* e Instrucciones de prueba para revisores (*Reviewers / Test Instructions*)
-
-En la seccion **Testing instructions** (o comentarios al revisor durante el envio), pega este texto para evitar rechazos automaticos por conectividad local:
+## 4. Instrucciones para el revisor
 
 ```text
-This extension is a specialized local developer tool for ABB RobotStudio / RobotWare 6 Virtual Controllers and IRC5 robots listening on loopback HTTP (http://127.0.0.1:<port>) via Robot Web Services (RWS 1.0).
+The extension talks to ABB robot controllers through Robot Web Services. Without a robot, use the open-source fixture server from the repository:
 
-How to test without a physical ABB robot:
-1. Install the extension and open the extension Options page (`options.html`) or Side Panel / Popup (`panel.html`).
-2. Confirm that the UI cleanly warns when no controller is reachable and provides explicit host/port configuration (loopback 127.0.0.1 enabled by default; LAN IP prompts via chrome.permissions.request()).
-3. Alternatively, run the included open-source fixture server from the companion repository (https://github.com/Data-Unix/mcp-robotstudio):
-   cd packages && npm ci && npm run build && node -e "import('./mcp-robotstudio/dist/testing/fake-rws-server.js').then(async ({FakeRwsServer}) => { const s = new FakeRwsServer(); console.log(await s.start()); })"
-   Enter that printed loopback port in the extension Options page with default credentials ("Default User" / "robotics") and click "Probar conexion".
+  cd packages && npm ci && npm run build
+  node -e "import('./mcp-robotstudio/dist/testing/fake-rws-server.js').then(async ({FakeRwsServer}) => { const s = new FakeRwsServer(); console.log(await s.start()); })"
 
-Security notes:
-- Strictly read-only (HTTP GET only); contains zero write endpoints or motion commands.
-- Passwords stay solely in `chrome.storage.session` (TRUSTED_CONTEXTS) and are never persisted to disk or sent externally.
+Enter the printed port in Options (user "Default User", password "robotics") and press "Probar conexion". Free features work immediately. PRO features need a licence token; a review token can be provided on request.
 ```

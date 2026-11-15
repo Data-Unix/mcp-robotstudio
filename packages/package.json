@@ -1,5 +1,6 @@
 {
   "name": "mcp-robotstudio-monorepo",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -13,7 +14,10 @@
     "build": "npm run build -w mcp-robotstudio && npm run build -w chrome-extension",
     "typecheck": "npm run build -w mcp-robotstudio && npm run typecheck -w mcp-robotstudio && npm run typecheck -w chrome-extension",
     "lint": "eslint mcp-robotstudio/src mcp-robotstudio/tests chrome-extension/src chrome-extension/tests chrome-extension/build.mjs",
-    "test": "npm run build -w mcp-robotstudio && npm run build -w chrome-extension && npm run test -w mcp-robotstudio && npm run test -w chrome-extension"
+    "test": "npm run build -w mcp-robotstudio && npm run build -w chrome-extension && npm run test -w mcp-robotstudio && npm run test -w chrome-extension",
+    "version:check": "python ../scripts/sync_version.py --check",
+    "version:set": "python ../scripts/sync_version.py --set",
+    "pack:all": "python ../scripts/sync_version.py --check && npm run build && npm run pack:zip -w @mcp-robotstudio/chrome-extension && npm pack -w mcp-robotstudio && python ../scripts/sync_version.py --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

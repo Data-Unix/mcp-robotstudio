@@ -1,10 +1,30 @@
 import {
+  type ControllerDir,
+  dialectFromChallenge,
+  guessDialectFromUrl,
+  type MastershipDomain,
+  type ResolvedDialect,
+  routesFor,
+  type RwsProtocolDialect,
+  type RwsRoutes,
+} from "./dialect.js";
+import {
+  basicAuthorization,
   computeDigestAuthorization,
   type DigestChallenge,
   parseAuthenticateHeader,
   RwsError,
 } from "./digest.js";
 import {
+  type ControllerFileInfo,
+  parseFileListXml,
+  parseGrantsXml,
+  parsePcpXml,
+  parseRmmpXml,
+  parseSpeedRatioXml,
+  parseSymbolPropertiesXml,
+  type ProgramPointerPosition,
+  type SymbolProperties,
   type EventLogEntry,
   type IoSignalInfo,
   type JointTargetInfo,
@@ -43,6 +63,32 @@ export interface RwsClientOptions {
   cookieStore?: CookieStore;
   fetchImpl?: typeof fetch;
   cnonceGenerator?: () => string;
+  /**
+   * "rws1" (IRC5/RW6, Digest over HTTP), "rws2" (OmniCore/RW7-8, Basic over HTTPS)
+   * or "auto" (default): guessed from the URL scheme, then fixed by the first 401
+   * challenge (Digest -> rws1, Basic over https -> rws2).
+   */
+  dialect?: RwsProtocolDialect;
+}
+
+export interface RwsResponse {
+  status: number;
+  body: string;
+  location?: string;
+}
+
+export interface UserPrivileges {
+  users: string[];
+  rmmp: { privilege: string | null; heldByMe: boolean | null } | null;
+  grants: string[];
+  /** Endpoints that answered; missing ones are listed in `unavailable`. */
+  unavailable: string[];
+}
+
+export interface ProgramPointerResult {
+  task: string;
+  programPointer: ProgramPointerPosition;
+  motionPointer: ProgramPointerPosition;
 }
 
 export interface ControllerStateResult {
@@ -122,6 +168,10 @@ export class RwsReadOnlyClient {
   private authInFlight: Promise<void> | null = null;
   private lastChallenge?: DigestChallenge;
   private nonceCount = 0;
+  private useBasic = false;
+
+  readonly requestedDialect: RwsProtocolDialect;
+  private resolved: ResolvedDialect;
 
   constructor(options: RwsClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? "http://127.0.0.1:80").replace(/\/+$/, "");
@@ -132,6 +182,35 @@ export class RwsReadOnlyClient {
     this.cookieStore = options.cookieStore;
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.cnonceGenerator = options.cnonceGenerator;
+    this.requestedDialect = options.dialect ?? "auto";
+    this.resolved =
+      this.requestedDialect === "auto" ? guessDialectFromUrl(this.baseUrl) : this.requestedDialect;
+    if (this.resolved === "rws2" && !this.isTls) {
+      throw new RwsError("RWS 2.0 requires an https:// base URL (Basic credentials are never sent over HTTP)", {
+        status: 400,
+        rwsCode: "RWS2_REQUIRES_TLS",
+        rwsMessage: "Use https:// for OmniCore controllers",
+      });
+    }
+  }
+
+  get isTls(): boolean {
+    return /^https:/i.test(this.baseUrl);
+  }
+
+  /** Dialect in use (resolved from "auto" after the first challenge). */
+  get dialect(): ResolvedDialect {
+    return this.resolved;
+  }
+
+  get routes(): RwsRoutes {
+    return routesFor(this.resolved);
+  }
+
+  /** Forces a GET /rw/system so "auto" settles on the controller's real dialect. */
+  async detectDialect(): Promise<ResolvedDialect> {
+    await this.request("GET", "/rw/system");
+    return this.resolved;
   }
 
   get cookieStoreKey(): string {
@@ -182,6 +261,10 @@ export class RwsReadOnlyClient {
     authorization?: string,
   ): Promise<Response> {
     const headers = new Headers();
+    const accept = this.routes.accept;
+    if (accept) {
+      headers.set("Accept", accept);
+    }
     if (contentType) {
       headers.set("Content-Type", contentType);
     }
@@ -226,7 +309,7 @@ export class RwsReadOnlyClient {
       body?: Record<string, string> | string;
       contentType?: string;
     } = {},
-  ): Promise<{ status: number; body: string }> {
+  ): Promise<RwsResponse> {
     while (this.authInFlight) {
       await this.authInFlight;
     }
@@ -254,7 +337,7 @@ export class RwsReadOnlyClient {
       body?: Record<string, string> | string;
       contentType?: string;
     } = {},
-  ): Promise<{ status: number; body: string }> {
+  ): Promise<RwsResponse> {
     await this.ensureCookiesLoaded();
 
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -266,15 +349,17 @@ export class RwsReadOnlyClient {
       contentType ??= "text/plain;charset=utf-8";
     } else if (options.body) {
       encodedBody = new URLSearchParams(options.body).toString();
-      contentType ??= "application/x-www-form-urlencoded";
+      contentType ??= this.routes.formContentType;
     } else if (method === "POST" || method === "PUT") {
       encodedBody = "";
-      contentType ??= "application/x-www-form-urlencoded";
+      contentType ??= this.routes.formContentType;
     }
 
     // First try using existing session cookie (or cached Digest challenge if no cookie yet).
     let authHeader: string | undefined;
-    if (this.cookies.size === 0 && this.lastChallenge) {
+    if (this.cookies.size === 0 && this.useBasic) {
+      authHeader = basicAuthorization(this.username, this.password);
+    } else if (this.cookies.size === 0 && this.lastChallenge) {
       this.nonceCount += 1;
       authHeader = computeDigestAuthorization({
         username: this.username,
@@ -292,6 +377,26 @@ export class RwsReadOnlyClient {
     // Handle 401 Digest challenge (initial auth, expired cookie, or stale nonce).
     if (response.status === 401) {
       const wwwAuth = response.headers.get("www-authenticate") ?? "";
+      const implied = dialectFromChallenge(wwwAuth);
+
+      // RWS 2.0: Basic is accepted ONLY over TLS and only when not forced to rws1.
+      if (implied === "rws2" && this.isTls && this.requestedDialect !== "rws1") {
+        this.resolved = "rws2";
+        this.useBasic = true;
+        response = await this.sendOnce(
+          method,
+          normalizedPath,
+          encodedBody,
+          contentType ?? (encodedBody !== undefined ? this.routes.formContentType : undefined),
+          basicAuthorization(this.username, this.password),
+        );
+        return await this.finish(response);
+      }
+      if (implied === "rws1" && this.requestedDialect === "auto") {
+        this.resolved = "rws1";
+      }
+
+      // Digest path; parseAuthenticateHeader rejects Basic (cleartext over HTTP).
       const challenge = parseAuthenticateHeader(wwwAuth);
       this.lastChallenge = challenge;
       this.nonceCount = 1;
@@ -337,6 +442,10 @@ export class RwsReadOnlyClient {
       }
     }
 
+    return await this.finish(response);
+  }
+
+  private async finish(response: Response): Promise<RwsResponse> {
     const text = response.status === 204 ? "" : await response.text();
     if (!response.ok && response.status !== 204) {
       const detail = parseRwsErrorBody(text);
@@ -355,7 +464,8 @@ export class RwsReadOnlyClient {
       });
     }
 
-    return { status: response.status, body: text };
+    const location = response.headers.get("location") ?? undefined;
+    return { status: response.status, body: text, ...(location ? { location } : {}) };
   }
 
   async getSystemInfo(): Promise<SystemInfo> {
@@ -404,7 +514,7 @@ export class RwsReadOnlyClient {
     // RW6 RWS 1.0 uses /rw/rapid/modules?task=... (RW7 /tasks/<t>/modules returns 404).
     const { body } = await this.request(
       "GET",
-      `/rw/rapid/modules?task=${encodeURIComponent(task)}`,
+      this.routes.modules(task),
     );
     return {
       task,
@@ -419,7 +529,7 @@ export class RwsReadOnlyClient {
   ): Promise<{ task: string; module: string; symbol: string; value: string | null }> {
     const { body } = await this.request(
       "GET",
-      `/rw/rapid/symbol/data/RAPID/${encodeURIComponent(task)}/${encodeURIComponent(module)}/${encodeURIComponent(symbol)}`,
+      this.routes.symbol(task, module, symbol),
     );
     return {
       task,
@@ -516,6 +626,135 @@ export class RwsReadOnlyClient {
     const { body } = await this.request("GET", "/rw/mastership");
     return parseMastershipXml(body);
   }
+
+  /** GET /rw/rapid/tasks/<task>/pcp. With PP unset RW6 returns error -1073442809 per pointer. */
+  async getProgramPointer(task = this.task): Promise<ProgramPointerResult> {
+    const { body } = await this.request("GET", this.routes.pcp(task));
+    return { task, ...parsePcpXml(body) };
+  }
+
+  /**
+   * GET /rw/motionsystem/mechunits/<unit>: active tool/wobj and the SMB
+   * synchronization status ("Synchronized" when revolution counters are valid;
+   * verified live on RW 6.16). RW6 has no ?resource=calibration (400).
+   */
+  async getMechunitStatus(mechunit = "ROB_1"): Promise<{
+    mechunit: string;
+    status: string | null;
+    mode: string | null;
+    tool: string | null;
+    wobj: string | null;
+  }> {
+    const { body } = await this.request("GET", `/rw/motionsystem/mechunits/${encodeURIComponent(mechunit)}`);
+    const span = (c: string) => new RegExp(`<span class="${c}">([^<]*)<`).exec(body)?.[1]?.trim() ?? null;
+    return { mechunit, status: span("status"), mode: span("mode"), tool: span("tool-name"), wobj: span("wobj-name") };
+  }
+
+  async getSpeedRatio(): Promise<{ speedRatio: number | null }> {
+    const { body } = await this.request("GET", "/rw/panel/speedratio");
+    return parseSpeedRatioXml(body);
+  }
+
+  /** RWS 1.0: /rw/rapid/symbol/properties/RAPID/<task>/<module>/<symbol> (symtyp per|var|con). */
+  async getSymbolProperties(module: string, symbol: string, task = this.task): Promise<SymbolProperties> {
+    const enc = encodeURIComponent;
+    const path =
+      this.dialect === "rws2"
+        ? `/rw/rapid/symbol/RAPID/${enc(task)}/${enc(module)}/${enc(symbol)}/properties`
+        : `/rw/rapid/symbol/properties/RAPID/${enc(task)}/${enc(module)}/${enc(symbol)}`;
+    const { body } = await this.request("GET", path);
+    return parseSymbolPropertiesXml(body);
+  }
+
+  async listFiles(dir: ControllerDir = "TEMP"): Promise<{ dir: string; files: ControllerFileInfo[] }> {
+    const { body } = await this.request("GET", this.routes.file(dir));
+    return { dir: this.routes.dirToken(dir), ...parseFileListXml(body) };
+  }
+
+  async readFile(dir: ControllerDir, name: string): Promise<string> {
+    const { body } = await this.request("GET", this.routes.file(dir, name));
+    return body;
+  }
+
+  /**
+   * UAS view of the logged-in RWS user: /users, /users/rmmp and /users/grants.
+   * Each endpoint is optional; failures are reported in `unavailable`.
+   */
+  async getUserPrivileges(): Promise<UserPrivileges> {
+    const unavailable: string[] = [];
+    const users = await this.request("GET", "/users")
+      .then((r) => [...r.body.matchAll(/<span class="name">([^<]*)</g)].map((m) => m[1]!.trim()))
+      .catch(() => {
+        unavailable.push("/users");
+        return [] as string[];
+      });
+    const rmmp = await this.request("GET", "/users/rmmp")
+      .then((r) => parseRmmpXml(r.body))
+      .catch(() => {
+        unavailable.push("/users/rmmp");
+        return null;
+      });
+    const grants = await this.request("GET", "/users/grants")
+      .then((r) => parseGrantsXml(r.body).grants)
+      .catch(() => {
+        unavailable.push("/users/grants");
+        return [] as string[];
+      });
+    return { users, rmmp, grants, unavailable };
+  }
+
+  /**
+   * Extracts the live module text from controller RAM: action=save to TEMP,
+   * GET the file, then DELETE it (always, also on error). The saved file name
+   * is not predictable on RW 6.16 (verified live: a 7-char name is saved as
+   * "<name>.mod", longer names are cut to 7 chars without extension), so the
+   * file is located by listing TEMP after the save.
+   */
+  async readModuleSource(module: string, task = this.task): Promise<{
+    task: string;
+    module: string;
+    source: string;
+    tempFile: string;
+    cleanedUp: boolean;
+  }> {
+    const rand = Array.from(globalThis.crypto.getRandomValues(new Uint8Array(2)), (b) =>
+      b.toString(16).padStart(2, "0"),
+    ).join("");
+    const base = `mcp${rand}`; // 7 chars, never truncated
+    await this.request("POST", this.routes.saveModule(task, module), {
+      body: { name: base, path: this.routes.dirToken("TEMP") },
+    });
+    const listed = await this.listFiles("TEMP");
+    const tempName =
+      listed.files.find((f) => f.kind === "file" && (f.name === `${base}.mod` || f.name === base))?.name ??
+      listed.files.find((f) => f.kind === "file" && f.name.startsWith(base))?.name;
+    if (!tempName) {
+      throw new RwsError(`Module ${module} was not saved to TEMP (no ${base}* file found)`, {
+        status: 500,
+        rwsCode: "SAVE_NOT_FOUND",
+        rwsMessage: `files in TEMP: ${listed.files.map((f) => f.name).join(", ")}`,
+      });
+    }
+    const tempFile = `${this.routes.dirToken("TEMP")}/${tempName}`;
+    const read = await this.readFile("TEMP", tempName).then(
+      (source) => ({ source }),
+      (error: unknown) => ({ error }),
+    );
+    const cleanedUp = await this.request("DELETE", this.routes.file("TEMP", tempName)).then(
+      () => true,
+      () => false,
+    );
+    if ("error" in read) throw read.error;
+    if (!cleanedUp) {
+      // Surface leftover garbage instead of hiding it.
+      throw new RwsError(`Temporary file ${tempFile} could not be deleted`, {
+        status: 500,
+        rwsCode: "TEMP_CLEANUP_FAILED",
+        rwsMessage: `Delete ${tempFile} manually`,
+      });
+    }
+    return { task, module, source: read.source, tempFile, cleanedUp };
+  }
 }
 
 export class RwsClient extends RwsReadOnlyClient {
@@ -534,7 +773,7 @@ export class RwsClient extends RwsReadOnlyClient {
   }> {
     const { status } = await this.request(
       "POST",
-      `/rw/rapid/symbol/data/RAPID/${encodeURIComponent(task)}/${encodeURIComponent(module)}/${encodeURIComponent(symbol)}?action=set`,
+      this.routes.symbolSet(task, module, symbol),
       { body: { value } },
     );
     return {
@@ -554,7 +793,7 @@ export class RwsClient extends RwsReadOnlyClient {
     const lvalue = String(value);
     const { status } = await this.request(
       "POST",
-      `/rw/iosystem/signals/${encodePathSegments(name)}?action=set`,
+      this.routes.signalSet(name),
       { body: { lvalue } },
     );
     return {
@@ -565,12 +804,12 @@ export class RwsClient extends RwsReadOnlyClient {
     };
   }
 
-  protected async withRapidMastership<T>(fn: () => Promise<T>): Promise<T> {
-    await this.request("POST", "/rw/mastership/rapid?action=request");
+  protected async withMastership<T>(fn: () => Promise<T>, domain: MastershipDomain = "rapid"): Promise<T> {
+    await this.request("POST", this.routes.mastership(domain, "request"));
     try {
       return await fn();
     } finally {
-      await this.request("POST", "/rw/mastership/rapid?action=release").catch(() => undefined);
+      await this.request("POST", this.routes.mastership(domain, "release")).catch(() => undefined);
     }
   }
 
@@ -592,15 +831,15 @@ export class RwsClient extends RwsReadOnlyClient {
       ev ? `${ev.code ?? ""}|${ev.time ?? ""}|${ev.title ?? ""}|${ev.desc}` : "";
     const beforeTopSig = eventSig(beforeTop);
 
-    await this.request("PUT", `/fileservice/$HOME/${encodeURIComponent(baseName)}`, {
+    await this.request("PUT", this.routes.file("HOME", baseName), {
       body: input.content,
       contentType: "text/plain;v=2.0",
     });
 
-    const loadRes = await this.withRapidMastership(() =>
-      this.request("POST", `/rw/rapid/tasks/${encodeURIComponent(task)}?action=loadmod`, {
+    const loadRes = await this.withMastership(() =>
+      this.request("POST", this.routes.loadModule(task), {
         body: {
-          modulepath: `$HOME/${baseName}`,
+          modulepath: `${this.routes.dirToken("HOME")}/${baseName}`,
           replace: replace ? "true" : "false",
         },
       }),
@@ -677,12 +916,12 @@ export class RwsClient extends RwsReadOnlyClient {
     const resetPp = options.resetPp ?? false;
 
     if (resetPp) {
-      await this.withRapidMastership(() =>
-        this.request("POST", "/rw/rapid/execution?action=resetpp"),
+      await this.withMastership(() =>
+        this.request("POST", this.routes.execution("resetpp")),
       );
     }
 
-    const { status } = await this.request("POST", "/rw/rapid/execution?action=start", {
+    const { status } = await this.request("POST", this.routes.execution("start"), {
       body: {
         regain: "continue",
         execmode: "continue",
@@ -701,8 +940,72 @@ export class RwsClient extends RwsReadOnlyClient {
     };
   }
 
+  async setSpeedRatio(ratio: number): Promise<{ statusCode: number; speedRatio: number | null }> {
+    if (!Number.isInteger(ratio) || ratio < 0 || ratio > 100) {
+      throw new RwsError(`speed ratio must be an integer 0..100 (got ${ratio})`, {
+        status: 400,
+        rwsCode: "INVALID_SPEED_RATIO",
+        rwsMessage: "speed ratio out of range",
+      });
+    }
+    const { status } = await this.request("POST", this.routes.speedRatioSet(), {
+      body: { "speed-ratio": String(ratio) },
+    });
+    const { speedRatio } = await this.getSpeedRatio();
+    return { statusCode: status, speedRatio };
+  }
+
+  async resetProgramPointer(): Promise<{ statusCode: number }> {
+    const { status } = await this.withMastership(() =>
+      this.request("POST", this.routes.execution("resetpp")),
+    );
+    return { statusCode: status };
+  }
+
+  async deleteFile(dir: ControllerDir, name: string): Promise<{ statusCode: number }> {
+    const { status } = await this.request("DELETE", this.routes.file(dir, name));
+    return { statusCode: status };
+  }
+
+  /**
+   * POST /ctrl/backup?action=backup with backup=$TEMP/<dir>. Only TEMP is
+   * accepted (never HOME). RWS answers 202 + Location: /progress/<id>.
+   */
+  async triggerBackup(dirName: string, waitMs = 0): Promise<{
+    statusCode: number;
+    backupPath: string;
+    progress?: string;
+    state?: string;
+  }> {
+    if (!/^[A-Za-z0-9_-]{1,32}$/.test(dirName)) {
+      throw new RwsError(`Invalid backup directory name: ${dirName}`, {
+        status: 400,
+        rwsCode: "INVALID_BACKUP_DIR",
+        rwsMessage: "Use 1-32 chars [A-Za-z0-9_-]; the backup always goes under TEMP",
+      });
+    }
+    const backupPath = `${this.routes.dirToken("TEMP")}/${dirName}`;
+    // RW 6.16 (verified live): the body must be a fileservice URL path
+    // ("/fileservice/$TEMP/<dir>"); the manual's "$TEMP/<dir>" answers 400
+    // "Invalid File Service path".
+    const res = await this.request("POST", this.routes.backup(), {
+      body: { backup: this.routes.file("TEMP", dirName) },
+    });
+    const progress = res.location ? new URL(res.location, this.baseUrl).pathname : undefined;
+    let state: string | undefined;
+    const deadline = Date.now() + waitMs;
+    while (Date.now() < deadline) {
+      // RW6: /ctrl/backup?action=backupstate -> "Init State" | ... | "Backup Ready"
+      const body = (await this.request("GET", "/ctrl/backup?action=backupstate").catch((e: RwsError) => ({ body: e.rawBody ?? "" }))).body;
+      state = /<span class="backup state">([^<]*)</.exec(body)?.[1];
+      if (state && /ready|error|fail/i.test(state)) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return { statusCode: res.status, backupPath, ...(progress ? { progress } : {}), ...(state ? { state } : {}) };
+  }
+
   async stopRapid(): Promise<{ statusCode: number; panel: PanelState }> {
-    const { status } = await this.request("POST", "/rw/rapid/execution?action=stop", {
+    const { status } = await this.request("POST", this.routes.execution("stop"), {
       body: {
         stopmode: "stop",
         usetsp: "normal",

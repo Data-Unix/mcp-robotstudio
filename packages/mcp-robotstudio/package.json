@@ -1,7 +1,7 @@
 {
   "name": "mcp-robotstudio",
-  "version": "0.1.0",
-  "description": "Real ABB RobotWare 6 Robot Web Services (RWS 1.0) HTTP Digest client and stdio MCP server for ABB RobotStudio",
+  "version": "0.2.0",
+  "description": "ABB Robot Web Services client (RWS 1.0 IRC5/RW6 Digest, RWS 2.0 OmniCore/RW7-8 Basic over TLS) and stdio MCP server for ABB RobotStudio",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
@@ -24,6 +24,38 @@
     "./mcp": {
       "types": "./dist/mcp/index.d.ts",
       "import": "./dist/mcp/index.js"
+    },
+    "./kinematics": {
+      "types": "./dist/kinematics/index.d.ts",
+      "import": "./dist/kinematics/index.js"
+    },
+    "./rapid/validator": {
+      "types": "./dist/rapid/validator.d.ts",
+      "import": "./dist/rapid/validator.js"
+    },
+    "./rapid/diff": {
+      "types": "./dist/rapid/diff.d.ts",
+      "import": "./dist/rapid/diff.js"
+    },
+    "./recipes": {
+      "types": "./dist/recipes.d.ts",
+      "import": "./dist/recipes.js"
+    },
+    "./forensics": {
+      "types": "./dist/forensics.d.ts",
+      "import": "./dist/forensics.js"
+    },
+    "./rspag": {
+      "types": "./dist/rspag/audit.d.ts",
+      "import": "./dist/rspag/audit.js"
+    },
+    "./rspag/zip": {
+      "types": "./dist/rspag/zip.d.ts",
+      "import": "./dist/rspag/zip.js"
+    },
+    "./practice": {
+      "types": "./dist/practice/generator.d.ts",
+      "import": "./dist/practice/generator.js"
     },
     "./testing": {
       "types": "./dist/testing/fake-rws-server.d.ts",

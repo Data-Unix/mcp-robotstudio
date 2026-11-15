@@ -9,7 +9,6 @@ import * as esbuild from "esbuild-wasm";
 const EXTENSION_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(EXTENSION_DIR, "public");
 const DIST_DIR = path.join(EXTENSION_DIR, "dist");
-const ICONS_DIR = path.join(DIST_DIR, "icons");
 const ZIP_OUTPUT = path.join(EXTENSION_DIR, "mcp-robotstudio-rws-monitor.zip");
 
 const CRC_TABLE = (() => {
@@ -180,25 +179,104 @@ function writeChromeWebStoreZip(distDir, zipPath) {
   fs.writeFileSync(zipPath, Buffer.concat([...localParts, centralDir, eocd]));
 }
 
-export async function buildExtension({ zip = false } = {}) {
-  fs.rmSync(DIST_DIR, { recursive: true, force: true });
-  fs.mkdirSync(ICONS_DIR, { recursive: true });
+const REPO_ROOT = path.resolve(EXTENSION_DIR, "..", "..");
+
+// Plain ASCII arrows; any other pictographic code point is dropped (no emoji in the UI).
+const stripMd = (s) =>
+  s
+    .replace(/\*\*|`/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/↔/g, "<->")
+    .replace(/→/g, "->")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .trim();
+
+/** Course knowledge bundled with the extension (no network access at runtime). */
+export function buildKnowledge(root = REPO_ROOT) {
+  // The public export ships packages/ without metodologia/ or agentes/: build an empty knowledge base there.
+  const readIf = (...p) => (fs.existsSync(path.join(root, ...p)) ? fs.readFileSync(path.join(root, ...p), "utf8") : "");
+  const checklist = [];
+  const checklistMd = readIf("metodologia", "checklist-practica.md");
+  for (const line of checklistMd.split(/\r?\n/)) {
+    const sec = /^##\s+(.+)/.exec(line);
+    if (sec) checklist.push({ section: stripMd(sec[1]), items: [] });
+    const item = /^-\s+\[[ x]\]\s+(.+)/i.exec(line);
+    if (item && checklist.length) checklist[checklist.length - 1].items.push(stripMd(item[1]));
+  }
+  const incidents = [];
+  const indice = readIf("agentes", "memoria", "INDICE.md");
+  for (const line of indice.split(/\r?\n/)) {
+    const m = /^\|\s*([^|]+?)\s*\|\s*\[([^\]]+)\]\([^)]*\)\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
+    if (m) incidents.push({ category: m[1], id: m[2], summary: stripMd(m[3]) });
+  }
+  const temasDir = path.join(root, "referencias", "temas");
+  const topics = fs.existsSync(temasDir)
+    ? fs
+        .readdirSync(temasDir)
+        .filter((f) => f.endsWith(".md"))
+        .sort()
+        .map((f) => stripMd(/^#\s+(.+)/m.exec(fs.readFileSync(path.join(temasDir, f), "utf8"))?.[1] ?? f))
+    : [];
+  return { checklist, incidents, topics };
+}
+
+/**
+ * Store variant: the methodology checklist without internal repository paths or
+ * agent references, and no agent-memory incidents or topic list.
+ */
+export function storeKnowledge(k) {
+  const clean = (s) =>
+    s
+      .replace(/\s*\(scripts\/anonymize_rspag\.py\)/g, " (pestana 05: Anonimizar y descargar .rspag)")
+      .replace(/originales_NO_SUBIR\/ \(excluido de git\)/g, "una carpeta que no se publica")
+      .replace(/\s*\(rmhome\)/g, "")
+      .replace(/\s*\(read CalibData MyTool\)/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  return {
+    checklist: k.checklist.map((s) => ({ section: s.section, items: s.items.filter((i) => !/agentes\/|memoria|\bIA\b/i.test(i)).map(clean) })),
+    incidents: [],
+    topics: [],
+  };
+}
+
+/**
+ * @param {{ zip?: boolean, outDir?: string, licensePublicKey?: JsonWebKey }} [opts]
+ * licensePublicKey replaces src/license-public-key.ts (tests only: lets the E2E sign PRO tokens).
+ */
+export async function buildExtension({ zip = false, outDir = DIST_DIR, licensePublicKey } = {}) {
+  const DIST_DIR_ = outDir;
+  const ICONS_DIR_ = path.join(outDir, "icons");
+  fs.rmSync(DIST_DIR_, { recursive: true, force: true });
+  fs.mkdirSync(ICONS_DIR_, { recursive: true });
 
   for (const file of fs.readdirSync(PUBLIC_DIR)) {
     const src = path.join(PUBLIC_DIR, file);
-    const dst = path.join(DIST_DIR, file);
-    if (fs.statSync(src).isFile()) {
+    const dst = path.join(DIST_DIR_, file);
+    if (!fs.statSync(src).isFile()) continue;
+    if (zip && /\.(css|html)$/.test(file)) {
+      // Store package: drop authoring comments from CSS and HTML.
+      const text = fs.readFileSync(src, "utf8");
+      const stripped = file.endsWith(".css") ? text.replace(/\/\*[\s\S]*?\*\//g, "") : text.replace(/<!--[\s\S]*?-->/g, "");
+      fs.writeFileSync(dst, stripped.replace(/\n\s*\n+/g, "\n"));
+    } else {
       fs.copyFileSync(src, dst);
     }
   }
 
   for (const size of [16, 48, 128]) {
-    fs.writeFileSync(path.join(ICONS_DIR, `icon${size}.png`), createRobotIconPng(size));
+    fs.writeFileSync(path.join(ICONS_DIR_, `icon${size}.png`), createRobotIconPng(size));
   }
+  const knowledge = buildKnowledge();
+  fs.writeFileSync(path.join(DIST_DIR_, "knowledge.json"), `${JSON.stringify(zip ? storeKnowledge(knowledge) : knowledge, null, 1)}\n`);
 
   const preloadPath = path.join(EXTENSION_DIR, "esbuild-preload.cjs");
   const prevNodeOptions = process.env.NODE_OPTIONS;
-  const requireFlag = preloadPath.includes(" ") ? `--require="${preloadPath}"` : `--require=${preloadPath}`;
+  // NODE_OPTIONS treats "\" as an escape character inside quotes, so Windows
+  // paths containing spaces lost every separator.
+  // Node accepts forward slashes on Windows.
+  const preloadArg = preloadPath.replaceAll("\\", "/");
+  const requireFlag = preloadArg.includes(" ") ? `--require="${preloadArg}"` : `--require=${preloadArg}`;
   process.env.NODE_OPTIONS = prevNodeOptions ? `${prevNodeOptions} ${requireFlag}` : requireFlag;
 
   try {
@@ -207,13 +285,33 @@ export async function buildExtension({ zip = false } = {}) {
         path.join(EXTENSION_DIR, "src/background.ts"),
         path.join(EXTENSION_DIR, "src/panel.ts"),
         path.join(EXTENSION_DIR, "src/options.ts"),
+        path.join(EXTENSION_DIR, "src/offscreen.ts"),
+        path.join(EXTENSION_DIR, "src/rspag-worker.ts"),
       ],
-      outdir: DIST_DIR,
+      outdir: DIST_DIR_,
+      plugins: licensePublicKey
+        ? [
+            {
+              name: "test-license-key",
+              setup(b) {
+                b.onResolve({ filter: /license-public-key\.js$/ }, (a) => ({ path: a.path, namespace: "test-key" }));
+                b.onLoad({ filter: /.*/, namespace: "test-key" }, () => ({
+                  contents: `export const LICENSE_PUBLIC_KEY = ${JSON.stringify(licensePublicKey)};`,
+                  loader: "js",
+                }));
+              },
+            },
+          ]
+        : [],
       bundle: true,
       format: "esm",
       platform: "browser",
       target: "chrome120",
       minify: false,
+      // Store package: no source comments (internal notes, verification remarks) in the shipped
+      // bundle; identifiers stay readable so the code remains reviewable (no obfuscation).
+      minifyWhitespace: zip,
+      legalComments: zip ? "none" : "inline",
       sourcemap: false,
       logLevel: "silent",
     });
@@ -227,7 +325,7 @@ export async function buildExtension({ zip = false } = {}) {
   }
 
   if (zip) {
-    writeChromeWebStoreZip(DIST_DIR, ZIP_OUTPUT);
+    writeChromeWebStoreZip(DIST_DIR_, ZIP_OUTPUT);
   }
 }
 

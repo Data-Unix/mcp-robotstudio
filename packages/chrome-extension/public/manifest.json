@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "MCP-ROBOTSTUDIO RWS Monitor",
-  "short_name": "RWS Monitor",
-  "version": "0.1.0",
-  "description": "Monitor de solo lectura para ABB RobotStudio / RobotWare 6 via RWS 1.0 (Digest MD5): estado, modulos, senales, eventos y simbolos.",
+  "name": "MCP-ROBOTSTUDIO",
+  "short_name": "MCP-RS",
+  "version": "0.2.0",
+  "description": "Instrumentacion para ABB RobotStudio e IRC5/OmniCore via RWS 1.0 y 2.0: telemetria, forense, osciloscopio, alcance y practicas.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -11,17 +11,19 @@
   },
   "permissions": [
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "offscreen"
   ],
   "host_permissions": [
     "http://127.0.0.1/*",
     "http://localhost/*"
   ],
   "optional_host_permissions": [
-    "http://*/*"
+    "http://*/*",
+    "https://*/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'; frame-ancestors 'none';"
+    "extension_pages": "script-src 'self'; object-src 'self'; worker-src 'self'; base-uri 'none'; frame-ancestors 'none';"
   },
   "background": {
     "service_worker": "background.js",
@@ -31,7 +33,7 @@
     "default_path": "panel.html"
   },
   "action": {
-    "default_title": "MCP-ROBOTSTUDIO RWS Monitor (Solo lectura)",
+    "default_title": "MCP-ROBOTSTUDIO",
     "default_popup": "panel.html",
     "default_icon": {
       "16": "icons/icon16.png",

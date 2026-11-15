@@ -1,5 +1,11 @@
 # Auditoria de Seguridad — Extension Chrome MV3 y Paquete npm `mcp-robotstudio`
 
+> **Cambios de la v0.2.0 que sustituyen a las filas "solo lectura" de abajo (que describen la v0.1.0):**
+> - La extensión ya no es solo de lectura. Las escrituras (`setSpeedRatio`, `writeRecipe`, `loadModuleSafe`, `triggerBackup`) solo existen en `background.js` y se rechazan antes de cualquier petición si falta la licencia PRO o el modo escritura de la sesión (`PRO_WRITE_ACTIONS` en `src/background.ts`; test `tests/license-gating.test.ts`). La extensión no llama a `startRapid`, `stopRapid` ni `resetProgramPointer` (`tests/bundle-audit.test.ts`).
+> - Permiso nuevo `offscreen` (motivo `DOM_PARSER`) y hosts opcionales `https://*/*` para RWS 2.0. CSP con `worker-src 'self'` para `rspag-worker.js`.
+> - Licencia PRO: token ECDSA P-256 verificado localmente con WebCrypto; en el paquete solo va la clave pública (`src/license-public-key.ts`). La privada vive en `.license-lab/`, ignorada por git y excluida del export público (`scripts/export_public_release.py`, `EXCLUDED_DIRS` y `FORBIDDEN_ANYWHERE_DIRS`).
+> - Verificado en Chrome 157: el handshake WebSocket desde la página offscreen no lleva las cookies de sesión RWS (sin `SameSite`, por tanto Lax) y las reglas DNR no se le aplican; el controlador responde 401 y el osciloscopio pasa a polling. No se pidieron permisos `cookies` ni `declarativeNetRequest`.
+
 **Fecha:** 2026-11-15
 **Rama:** `feature/js-rws-mcp`
 **Alcance:**

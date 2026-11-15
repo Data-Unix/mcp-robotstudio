@@ -1,3 +1,14 @@
 export * from "./rws/index.js";
 export { FileCookieStore } from "./rws/node-cookie-store.js";
 export * from "./mcp/index.js";
+export * from "./kinematics/index.js";
+export * from "./rapid/validator.js";
+export * from "./rapid/diff.js";
+export * from "./recipes.js";
+export * from "./forensics.js";
+export * from "./rspag/audit.js";
+export * from "./rspag/zip.js";
+export * from "./rspag/node-codec.js";
+export * from "./practice/generator.js";
+export * from "./security.js";
+export { parseCliArgs, type CliConfig } from "./cli-args.js";

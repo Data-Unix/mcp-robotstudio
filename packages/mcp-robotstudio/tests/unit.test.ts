@@ -14,6 +14,8 @@ import {
   parseMastershipXml,
   parseModulesXml,
   parseOpModeXml,
+  parsePcpXml,
+  parseSubscriptionEvents,
   parseRobTargetXml,
   parseRwsErrorBody,
   parseSignalsListXml,
@@ -127,13 +129,29 @@ describe("HTTP Digest MD5 (RFC 7616 / RFC 2617)", () => {
   });
 });
 
-describe("RobotWare 6.16 real XML fixtures (all 16 captures)", () => {
-  it("contains and validates all 16 JSON fixtures without omitting any", () => {
+describe("RobotWare 6.16 real XML fixtures (all 20 captures)", () => {
+  it("parses the live pcp captures (running and PP not set)", () => {
+    const run = parsePcpXml(loadFixture("16-pcp-en-ejecucion.json").body);
+    expect(run.programPointer).toMatchObject({ module: "Practica63_Final", routine: "main", beginLine: 87, beginColumn: 21, endLine: 87, endColumn: 86, errorCode: null });
+    expect(run.motionPointer).toMatchObject({ module: "Practica63_Final", routine: "main", beginLine: 87, beginColumn: 27 });
+    const idle = parsePcpXml(loadFixture("17-pcp-sin-pp.json").body);
+    expect(idle.programPointer).toMatchObject({ module: null, errorCode: "-1073442809" });
+    expect(idle.motionPointer.errorCode).toBe("-1073445883");
+  });
+
+  it("parses the live WebSocket event frames (PERS value in sibling rap-data, PP change)", () => {
+    const pers = parseSubscriptionEvents(loadFixture("18-evento-ws-pers-value.json").body);
+    expect(pers).toEqual([{ uri: "/rw/rapid/symbol/data/RAPID/T_ROB1/Practica63_Final/nCeldasMatriz;value", values: { value: "217" } }]);
+    const pp = parseSubscriptionEvents(loadFixture("19-evento-ws-pp-change.json").body);
+    expect(pp[0]).toMatchObject({ uri: "/rw/rapid/tasks/T_ROB1/pcp;programpointerchange", values: { "module-name": "Practica63_Final", "routine-name": "main", BegPosLine: "87", BegPosCol: "21" } });
+  });
+
+  it("contains and validates all 20 JSON fixtures without omitting any", () => {
     const jsonFiles = fs
       .readdirSync(FIXTURES_DIR)
       .filter((f) => f.endsWith(".json"))
       .sort();
-    expect(jsonFiles).toHaveLength(16);
+    expect(jsonFiles).toHaveLength(20);
 
     const f00 = loadFixture("00-challenge-sin-credenciales.json");
     expect(f00.status).toBe(401);
@@ -222,5 +240,35 @@ describe("RobotWare 6.16 real XML fixtures (all 16 captures)", () => {
 
     const f15 = parseMastershipXml(loadFixture("15-mastership.json").body);
     expect(f15.domains).toEqual(["cfg", "motion", "rapid"]);
+  });
+});
+
+describe("lockstep version (npm package, GitHub release, Chrome extension)", () => {
+  const PACKAGES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const versionOf = (rel: string): unknown =>
+    (JSON.parse(fs.readFileSync(path.join(PACKAGES_DIR, rel), "utf8")) as { version?: unknown }).version;
+
+  it("keeps every package.json, the MV3 manifests, the MCP server and the CLI on one version", async () => {
+    const { PACKAGE_VERSION } = await import("../src/mcp/server.js");
+    const sources: Record<string, unknown> = {
+      "package.json": versionOf("package.json"),
+      "mcp-robotstudio/package.json": versionOf("mcp-robotstudio/package.json"),
+      "chrome-extension/package.json": versionOf("chrome-extension/package.json"),
+      "chrome-extension/public/manifest.json": versionOf("chrome-extension/public/manifest.json"),
+      "mcp server PACKAGE_VERSION": PACKAGE_VERSION,
+    };
+    if (fs.existsSync(path.join(PACKAGES_DIR, "chrome-extension/dist/manifest.json"))) {
+      sources["chrome-extension/dist/manifest.json"] = versionOf("chrome-extension/dist/manifest.json");
+    }
+    const cli = path.join(PACKAGES_DIR, "mcp-robotstudio/dist/cli.js");
+    if (fs.existsSync(cli)) {
+      const { execFileSync } = await import("node:child_process");
+      sources["cli --version"] = execFileSync(process.execPath, [cli, "--version"], { encoding: "utf8" })
+        .trim()
+        .replace(/^mcp-robotstudio v/, "");
+    }
+    const expected = versionOf("mcp-robotstudio/package.json");
+    expect(expected).toMatch(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+    expect(sources).toEqual(Object.fromEntries(Object.keys(sources).map((k) => [k, expected])));
   });
 });

@@ -323,6 +323,123 @@ export function parseRobTargetXml(xml: string): RobTargetInfo {
   };
 }
 
+export interface ProgramPointerPosition {
+  module: string | null;
+  routine: string | null;
+  beginLine: number | null;
+  beginColumn: number | null;
+  endLine: number | null;
+  endColumn: number | null;
+  /** RWS error code when the pointer is not available (e.g. PP not set). */
+  errorCode: string | null;
+}
+
+function parsePosition(raw: string | null): [number | null, number | null] {
+  if (!raw) return [null, null];
+  const [l, c] = raw.split(",").map((s) => Number(s.trim()));
+  return [Number.isFinite(l) ? (l as number) : null, Number.isFinite(c) ? (c as number) : null];
+}
+
+function parsePcpBlock(block: string | undefined): ProgramPointerPosition {
+  const empty: ProgramPointerPosition = {
+    module: null,
+    routine: null,
+    beginLine: null,
+    beginColumn: null,
+    endLine: null,
+    endColumn: null,
+    errorCode: null,
+  };
+  if (!block) return empty;
+  const err = /retcode\?code=(-?\d+)/.exec(block)?.[1] ?? null;
+  // RW 6.16 (verified live): progpointer uses "beginposition", motionpointer "begposition".
+  const [beginLine, beginColumn] = parsePosition(extractSpan(block, "beginposition") ?? extractSpan(block, "begposition"));
+  const [endLine, endColumn] = parsePosition(extractSpan(block, "endposition"));
+  return {
+    // RW6 spells the module span "modulemame"; accept both spellings.
+    module: extractSpan(block, "modulemame") ?? extractSpan(block, "modulename"),
+    routine: extractSpan(block, "routinename"),
+    beginLine,
+    beginColumn,
+    endLine,
+    endColumn,
+    errorCode: err,
+  };
+}
+
+/** Parses GET /rw/rapid/tasks/<task>/pcp (progpointer + motionpointer). */
+export function parsePcpXml(xml: string): {
+  programPointer: ProgramPointerPosition;
+  motionPointer: ProgramPointerPosition;
+} {
+  const blocks = xml.match(/<li\s+class="pcp-info"[\s\S]*?<\/li>/gi) ?? [];
+  const find = (title: string) => blocks.find((b) => new RegExp(`title="${title}"`, "i").test(b));
+  return {
+    programPointer: parsePcpBlock(find("progpointer")),
+    motionPointer: parsePcpBlock(find("motionpointer")),
+  };
+}
+
+export function parseSpeedRatioXml(xml: string): { speedRatio: number | null } {
+  return { speedRatio: toFiniteNumber(extractSpan(xml, "speedratio")) };
+}
+
+export interface SymbolProperties {
+  symburl: string | null;
+  /** "per" (PERS), "var", "con" (CONST), ... */
+  symtyp: string | null;
+  dattyp: string | null;
+  rdonly: string | null;
+}
+
+export function parseSymbolPropertiesXml(xml: string): SymbolProperties {
+  return {
+    symburl: extractSpan(xml, "symburl"),
+    symtyp: extractSpan(xml, "symtyp"),
+    dattyp: extractSpan(xml, "dattyp"),
+    rdonly: extractSpan(xml, "rdonly"),
+  };
+}
+
+export interface ControllerFileInfo {
+  name: string;
+  kind: "file" | "dir";
+  size: number | null;
+  modified: string | null;
+}
+
+export function parseFileListXml(xml: string): { files: ControllerFileInfo[] } {
+  const blocks = xml.match(/<li\s+class="fs-(?:file|dir)"[\s\S]*?<\/li>/gi) ?? [];
+  const files: ControllerFileInfo[] = [];
+  for (const b of blocks) {
+    const name = /title="([^"]*)"/.exec(b)?.[1];
+    if (!name) continue;
+    files.push({
+      name: decodeXmlEntities(name),
+      kind: /class="fs-dir"/.test(b) ? "dir" : "file",
+      size: toFiniteNumber(extractSpan(b, "fs-size")),
+      modified: extractSpan(b, "fs-mdate"),
+    });
+  }
+  return { files };
+}
+
+export function parseRmmpXml(xml: string): { privilege: string | null; heldByMe: boolean | null } {
+  const held = extractSpan(xml, "rmmpheldbyme");
+  return {
+    privilege: extractSpan(xml, "privilege"),
+    heldByMe: held === null ? null : held === "true",
+  };
+}
+
+export function parseGrantsXml(xml: string): { grants: string[] } {
+  const blocks = xml.match(/<li\s+class="user-grant"[^>]*>/gi) ?? [];
+  const grants = blocks
+    .map((b) => /title="([^"]*)"/.exec(b)?.[1])
+    .filter((g): g is string => Boolean(g));
+  return { grants: Array.from(new Set(grants)) };
+}
+
 export function parseMastershipXml(xml: string): { domains: string[] } {
   const blocks = extractListBlocks(xml, "msh-resource-li");
   const domains: string[] = [];

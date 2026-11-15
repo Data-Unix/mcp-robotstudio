@@ -1,0 +1,9 @@
+{
+  "request": "GET /rw/rapid/tasks/T_ROB1/pcp",
+  "status": 200,
+  "headers": {
+    "content-type": "application/xhtml+xml"
+  },
+  "note": "Captura real RW 6.16.3007 con el programa parado y el PP sin fijar, 2026-11-15. -1073442809 = SYS_CTRL_E_EXEC_STATE (GET /rw/retcode?code=-1073442809).",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><body><div class=\"state\"> <a href=\"tasks/T_ROB1/pcp\" rel=\"self\"></a> <a href=\"tasks/T_ROB1/pcp?action=show\" rel=\"action\"></a> <ul> <li class=\"pcp-info\" title=\"progpointer\"> <a href=\"http://127.0.0.1:80/rw/retcode?code=-1073442809\" rel=\"error\" class=\"pcp-info\"/></li><li class=\"pcp-info\" title=\"motionpointer\"> <a href=\"http://127.0.0.1:80/rw/retcode?code=-1073445883\" rel=\"error\" class=\"pcp-info\"/></li> </ul></div></body></html>"
+}

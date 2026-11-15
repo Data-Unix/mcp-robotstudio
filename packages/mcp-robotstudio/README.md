@@ -1,106 +1,108 @@
 # mcp-robotstudio
 
-Real **ABB RobotWare 6 Robot Web Services (RWS 1.0)** client and **Model Context Protocol (MCP)** stdio server in TypeScript (Node >= 20 LTS, ESM, Apache-2.0).
+ABB **Robot Web Services** client (RWS 1.0 for IRC5 / RobotWare 6, RWS 2.0 for OmniCore / RobotWare 7-8) and **Model Context Protocol (MCP)** stdio server in TypeScript (Node >= 20, ESM, Apache-2.0).
 
-Unlike mock/stub implementations, `mcp-robotstudio` communicates with real ABB IRC5 / Virtual Controllers (tested against RobotWare 6.16 fixtures) over HTTP Digest (`MD5`, `qop="auth"`), maintains the session cookie across requests, and strictly enforces read-only mode unless `--allow-write` is explicitly enabled.
+It talks to real controllers. Everything marked "verified live" below was checked against a RobotWare 6.16 virtual controller (IRB 120-3/0.58); RWS 2.0 is covered by documentation and the bundled `FakeRwsServer` only.
 
 ## Highlights
 
-- **Real RWS 1.0 client (`mcp-robotstudio/rws`)**:
-  - RFC 7616 / RFC 2617 HTTP Digest `MD5` with `qop="auth"`, automatic `stale="TRUE"` nonce renewal, and `nc` counter tracking.
-  - **Rejects HTTP Basic challenges** (`BASIC_AUTH_REJECTED`) so credentials never travel in clear base64 over HTTP.
-  - Reuses the controller session cookie (`ABBCX` / `Set-Cookie`, persisted in `FileCookieStore` on Node) to prevent exhausting controller sessions (`Too many sessions 70/70`).
-  - Parses ABB XHTML responses and extracts structured `<span class="code">` / `<span class="msg">` controller errors (`RwsError`).
-  - Uses RobotWare 6 endpoints (including `/rw/rapid/modules?task=...`, avoiding the RW7-only path that returns 404 on RW6).
-  - Pure Web Standards (`fetch`, `AbortController`) for the core RWS client so it runs identically in Node >= 20 and Chrome Extensions (MV3).
-- **Safe-by-default MCP server (`mcp-robotstudio/mcp`)**:
-  - Read-only by default: exposes **8 read-only tools**.
-  - Write and execution tools (**4 tools**) are **not registered** in `tools/list` unless `--allow-write` is passed.
-  - Every tool response returns both `content` (`text`) and an object `structuredContent` matching the MCP specification.
-- **Zero native dependencies and no `postinstall` scripts**: pure TypeScript/ESM runtime (`@modelcontextprotocol/sdk` and `zod` only).
+- **RWS client (`mcp-robotstudio/rws`)**
+  - Dialects `auto` | `rws1` | `rws2`. RWS 1.0: HTTP Digest MD5 (`qop="auth"`). RWS 2.0: Basic **only over HTTPS**, `Accept: application/xhtml+xml;v=2.0`, path actions, `edit` mastership, `HOME`/`TEMP` roots. `auto` decides from the URL scheme and the first 401 challenge.
+  - Basic over plain HTTP is always rejected (`BASIC_AUTH_REJECTED`).
+  - Reuses the session cookies (`-http-session-`, `ABBCX`) so the controller's 70-session limit is never hit.
+  - WebSocket subscriptions (`robapi2_subscription` / `rws_subscription`) with ABB priority rules and automatic polling fallback. The WebSocket path needs Node >= 22 (global `WebSocket`); on Node 20 subscriptions use polling.
+- **MCP server (`mcp-robotstudio/mcp`)**
+  - Read-only by default: 17 read tools, 0 mutating tools.
+  - Write tools are registered per scope: `--allow-io-write`, `--allow-var-write`, `--allow-module-upload`, `--allow-motion` (`--allow-write` = all four).
+  - Every call is written to an append-only, hash-chained audit log.
+- **Offline engineering libraries** (browser-safe subpath exports): IRB 120 kinematics, RAPID validator, line diff, recipe shield, forensic black box, `.rspag` audit/anonymizer, practice generator.
 
-## Requirements
+## CLI
 
-- Node.js `>= 20.0.0` (LTS 20 or 22 recommended)
-- ABB IRC5 or RobotStudio Virtual Controller with RobotWare 6 (RWS 1.0)
+```bash
+npx mcp-robotstudio --rws-url http://127.0.0.1:<port>
+```
 
-## Finding the Virtual Controller RWS Port on Windows
+```bash
+npx mcp-robotstudio --rws-url https://<omnicore-ip> --dialect rws2 --insecure-tls
+```
 
-RobotStudio Virtual Controllers (`RobVC`) can listen on dynamic ports or port `80`. Find the active listening port in PowerShell:
+```bash
+npx mcp-robotstudio --rws-url http://127.0.0.1:<port> --allow-var-write --allow-motion --audit-log ./audit.jsonl --agent claude-code
+```
+
+| Option | Env | Default | Description |
+|---|---|---|---|
+| `--rws-url <url>` | `RWS_URL` (or `ROBOT_IP` + `RWS_PORT`) | `http://127.0.0.1:80` | Controller base URL |
+| `--rws-user <user>` | `RWS_USER` | `Default User` | Username |
+| `--rws-pass <pass>` | `RWS_PASS` | `robotics` | Password |
+| `--task <task>` | `RWS_TASK` | `T_ROB1` | RAPID task |
+| `--dialect <d>` | - | `auto` | `auto`, `rws1`, `rws2` |
+| `--insecure-tls` | - | off | Accept a self-signed certificate (https only). Disables certificate checks for the process. |
+| `--allow-io-write` | - | off | `write_io_signal` |
+| `--allow-var-write` | - | off | `write_rapid_symbol` (PERS only, recipe shield) |
+| `--allow-module-upload` | - | off | `load_module`, `trigger_controller_backup` |
+| `--allow-motion` | - | off | `start_rapid`, `stop_rapid`, `reset_pp`, `set_speed_ratio` |
+| `--allow-write` | - | off | All four scopes |
+| `--audit-log <file>` | `MCP_RS_AUDIT_LOG` | `~/.mcp-robotstudio/audit.jsonl` | Append-only audit log |
+| `--agent <name>` | `MCP_RS_AGENT` | `mcp-client` | Agent name in each audit record |
+| `--timeout-ms <ms>` | - | `10000` | HTTP timeout |
+
+Find the virtual controller port on Windows:
 
 ```powershell
 $ids = (Get-Process RobVC).Id
 Get-NetTCPConnection -State Listen | Where-Object { $ids -contains $_.OwningProcess }
 ```
 
-## CLI Usage
+## MCP tools
 
-Read-only mode (recommended):
+### Read (always registered)
 
-```bash
-npx mcp-robotstudio --rws-url http://127.0.0.1:<port>
-```
+| Tool | What it does |
+|---|---|
+| `get_controller_state` | System, motors, mode, execution, tasks, dialect in use |
+| `list_modules` | Loaded modules (RW6 `/rw/rapid/modules?task=`, RW7 `/rw/rapid/tasks/<t>/modules`) |
+| `read_rapid_symbol` | Value of a RAPID symbol |
+| `list_signals`, `read_signal` | I/O signals |
+| `get_event_log` | `/rw/elog/<domain>` |
+| `get_joints`, `get_tcp` | Joint target and robtarget |
+| `get_program_pointer` | PP and MP: module, routine, line:column (verified live) |
+| `get_speed_ratio` | Speed ratio and cycle-time factor 100/ratio |
+| `get_user_privileges` | `/users`, `/users/rmmp`, `/users/grants` (UAS) |
+| `read_module_source` | Module text from controller RAM: save to TEMP, read, delete (verified live) |
+| `diff_module_with_golden` | Line diff between RAM and a Golden Master `.mod` |
+| `validate_rapid_offline` | Identifiers, unclosed blocks, non-unit quaternions, StorePath without StopMove, CONNECT without IDelete, IRB 120 reach of robtargets and `Offs` |
+| `capture_forensic_blackbox` | PP + code around it + I/O + elog + TCP + joints + speed, cross-checked with known incidents; JSON and Markdown |
+| `probe_reach_kinematics` | Offline IK of a target and its `Offs`, optional tilt sweep; never moves the robot |
+| `audit_rspag_package` | `system.guid`/`template.guid`, backup taken from a folder copy (0x800706BA), personal paths/e-mails, PNG metadata, CRC |
 
-With write/execution tools enabled (requires explicit confirmation of robot/controller changes):
+### Scoped (registered only with their flag)
 
-```bash
-npx mcp-robotstudio --rws-url http://127.0.0.1:<port> --allow-write
-```
-
-### CLI Options and Environment Variables
-
-| Option | Env Variable | Default | Description |
-|---|---|---|---|
-| `--rws-url <url>` | `RWS_URL` (or `ROBOT_IP` + `RWS_PORT`) | `http://127.0.0.1:80` | Controller RWS base URL |
-| `--rws-user <user>` | `RWS_USER` | `Default User` | RWS Digest username (virtual controller default) |
-| `--rws-pass <pass>` | `RWS_PASS` | `robotics` | RWS Digest password (virtual controller default) |
-| `--task <task>` | `RWS_TASK` | `T_ROB1` | Default RAPID task name |
-| `--allow-write` | — | `false` | Expose write/execution MCP tools |
-| `--timeout-ms <ms>` | — | `10000` | Per-request HTTP timeout |
-| `-v, --version` | — | — | Print package version and exit |
-| `-h, --help` | — | — | Show CLI help |
-
-## MCP Tools
-
-### Read-Only Tools (Always Available)
-
-| Tool | Inputs | Description |
+| Scope | Tool | Notes |
 |---|---|---|
-| `get_controller_state` | — | System info (`rwversion`, `name`, options), `ctrlstate`, `opmode`, `ctrlexecstate`, `cycle`, and RAPID tasks |
-| `list_modules` | `task?` | Loaded RAPID modules via RW6 `/rw/rapid/modules?task=...` |
-| `read_rapid_symbol` | `module`, `symbol`, `task?` | Reads RAPID variable/persistent/constant value |
-| `list_signals` | `filter?`, `limit?` | Lists I/O signals (`/rw/iosystem/signals`) with optional substring filter |
-| `read_signal` | `name` | Reads a single I/O signal state and value |
-| `get_event_log` | `limit?`, `domain?` | Reads recent entries from `/rw/elog/<domain>` |
-| `get_joints` | `mechunit?` | Reads current joint angles (`rax_1..rax_6`, external axes) |
-| `get_tcp` | `tool?`, `wobj?`, `mechunit?` | Reads Cartesian TCP `robtarget` (`x, y, z`, quaternion, configuration) |
-
-### Write / Execution Tools (Only Registered with `--allow-write`)
-
-| Tool | Inputs | Description |
-|---|---|---|
-| `write_rapid_symbol` | `module`, `symbol`, `value`, `task?` | Updates a RAPID symbol (`?action=set`) and reports the change |
-| `load_module` | `fileName`, `content`, `replace?`, `task?` | Uploads `.mod` to `$HOME`, acquires RAPID mastership, runs `loadmod`, then verifies module presence + event log (since RW6 returns HTTP 204 even on syntax errors) |
-| `start_rapid` | `cycle?`, `resetPp?` | Starts RAPID execution (with optional `resetpp` first) and returns updated execution state |
-| `stop_rapid` | — | Stops RAPID execution and returns updated execution state |
+| io-write | `write_io_signal` | Set or pulse; DI without device are rejected by the controller |
+| var-write | `write_rapid_symbol` | PERS only; blocks non-unit quaternions, jumps above `deltaMaxMm`, points outside the envelope or unreachable |
+| module-upload | `load_module` | Offline validation first, then upload, `loadmod` and a check of `/rw/rapid/modules` + new `/rw/elog/0` entries (RW6 answers 204 even with errors) |
+| module-upload | `trigger_controller_backup` | Into TEMP only (`/fileservice/$TEMP/<dir>`, verified live) |
+| motion | `start_rapid`, `stop_rapid`, `reset_pp`, `set_speed_ratio` | The robot may move |
 
 ## Programmatic API
 
 ```ts
-import { RwsClient, FileCookieStore } from "mcp-robotstudio";
-import { createMcpRobotStudioServer } from "mcp-robotstudio/mcp";
+import { RwsClient, FileCookieStore, RwsSubscriptionClient } from "mcp-robotstudio";
 
-const rws = new RwsClient({
-  baseUrl: "http://127.0.0.1:80",
-  username: "Default User",
-  password: "robotics",
-  cookieStore: new FileCookieStore(),
+const rws = new RwsClient({ baseUrl: "http://127.0.0.1:80", cookieStore: new FileCookieStore() });
+console.log((await rws.getProgramPointer()).programPointer);
+
+const sub = new RwsSubscriptionClient({
+  client: rws,
+  resources: [{ uri: "/rw/iosystem/signals/ARRAY;state", priority: 2 }],
+  onEvent: (e) => console.log(e.uri, e.values),
 });
-
-const state = await rws.getControllerState();
-console.log(state.system?.rwversion, state.panel.ctrlstate);
+await sub.start();
 ```
 
 ## License
 
-Apache-2.0 — see [LICENSE](./LICENSE).
+Apache-2.0, see [LICENSE](./LICENSE).

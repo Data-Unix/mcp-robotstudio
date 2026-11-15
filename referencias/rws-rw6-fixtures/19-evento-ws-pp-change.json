@@ -1,0 +1,9 @@
+{
+  "request": "WebSocket ws://127.0.0.1:80/poll/<id> (robapi2_subscription) tras POST /subscription 1=/rw/rapid/tasks/T_ROB1/pcp;programpointerchange&1-p=1",
+  "status": 101,
+  "headers": {
+    "sec-websocket-protocol": "robapi2_subscription"
+  },
+  "note": "Trama real RW 6.16.3007 (copia de validacion de Practica63_Final en ejecucion), 2026-11-15. La URI ;programpointerchange es aceptada (201); el POST inicial no trae valores para este recurso.",
+  "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\">  <body>  <div class=\"state\"><a href=\"subscription/4\" rel=\"group\"></a> <ul> <li class=\"rap-pp-ev\" title=\"pp\"><a href=\"/rw/rapid/tasks/T_ROB1/pcp;programpointerchange\" rel=\"self\"/><span class=\"module-name\">Practica63_Final</span><span class=\"routine-name\">main</span><span class=\"BegPosLine\">87</span><span class=\"BegPosCol\">21</span><span class=\"EndPosLine\">87</span><span class=\"EndPosCol\">86</span></li>  </ul> </div> </body></html>"
+}

@@ -1,42 +1,38 @@
-# Politica de Privacidad — MCP-ROBOTSTUDIO RWS Monitor
+# Política de privacidad: MCP-ROBOTSTUDIO
 
-**Ultima actualizacion:** 2026-11-15
-**Responsable:** `Data-Unix` — Proyecto `mcp-robotstudio` (`https://github.com/Data-Unix/mcp-robotstudio`)
+**Última actualización:** 2026-11-15 (versión 0.2.0)
+**Responsable:** `Data-Unix`, proyecto `mcp-robotstudio` (`https://github.com/Data-Unix/mcp-robotstudio`)
 
-## 1. Proposito unico (Single Purpose)
+## 1. Propósito único
 
-La extension **MCP-ROBOTSTUDIO RWS Monitor** tiene un unico proposito: **mostrar en modo estrictamente de solo lectura** informacion operativa de un controlador ABB RobotStudio / RobotWare 6 (estado del sistema, motores, modo, ejecucion RAPID, ejes/TCP, modulos, senales I/O, registro de eventos y lectura de simbolos) mediante el protocolo local Robot Web Services (RWS 1.0).
+MCP-ROBOTSTUDIO muestra y opera desde el panel lateral de Chrome un controlador de robot ABB (controlador virtual de RobotStudio, IRC5 con RobotWare 6 u OmniCore con RobotWare 7-8) mediante Robot Web Services (RWS 1.0 y 2.0).
 
-La extension **no modifica el robot**, **no escribe variables ni senales**, **no carga programas** y **no inicia ni detiene la ejecucion RAPID**.
+Por defecto solo lee. Las funciones que escriben en el controlador (SpeedRatio, variables PERS de receta, carga de módulos, backup a TEMP) exigen la suscripción PRO y además que el usuario active el modo escritura de la sesión en Opciones. La extensión no arranca, no para y no mueve el programa del robot.
 
-## 2. Datos tratados y almacenamiento
+## 2. Datos tratados y dónde se guardan
 
-| Dato | Donde se guarda | Proposito | Se envia a terceros |
+| Dato | Dónde | Para qué | ¿Sale del equipo? |
 |---|---|---|---|
-| Host, puerto, tarea RAPID (`T_ROB1`) y nombre de usuario configurados por el usuario | `chrome.storage.local` (solo en el navegador local) | Recordar el destino de lectura entre aperturas del panel | No |
-| Contrasena RWS (opcional, sesion actual) | `chrome.storage.session` con `accessLevel = TRUSTED_CONTEXTS` (solo RAM de la sesion del navegador; se borra al cerrar Chrome y **nunca** se guarda en disco ni se sincroniza) | Calcular localmente el hash RFC 7616 HTTP Digest (`MD5`, `qop="auth"`) exigido por RWS | No. Nunca se transmite en claro (Basic rechazado) ni fuera del controlador configurado |
-| Cookie de sesion RWS (`ABBCX`) | `chrome.storage.session` (`TRUSTED_CONTEXTS`) | Evitar agotar el limite de 70 sesiones concurrentes del controlador RobotWare 6 | Solo al propio controlador configurado |
-| Telemetria, analitica, historial de navegacion, identificadores o PII | **No se recopilan** | — | No |
+| Host, puerto, tarea, usuario, dialecto RWS y lista de celdas de la flota | `chrome.storage.local` | Recordar a qué controladores conectarse | No |
+| Token de licencia PRO | `chrome.storage.local` | Comprobar localmente la firma de la licencia | No |
+| Contraseña RWS, cookies de sesión (`-http-session-`, `ABBCX`) y modo escritura | `chrome.storage.session` (`TRUSTED_CONTEXTS`), solo en memoria; se borra al cerrar Chrome | Autenticarse con Digest MD5 (RWS 1.0) o Basic sobre HTTPS (RWS 2.0) y no agotar el límite de sesiones | Solo al controlador configurado |
+| Ficheros `.rspag` y `.mod` que el usuario elige | Memoria del panel y de un Web Worker local | Auditar, anonimizar, comparar o validar | No. Los ficheros generados se descargan en el propio equipo |
+| Telemetría, analítica, historial, identificadores personales | No se recopilan | | No |
 
-## 3. Destino de las comunicaciones de red
+## 3. Comunicaciones de red
 
-Todas las peticiones HTTP (`GET`) salen directamente desde el *service worker* de la extension hacia el origen local o de red local configurado explicitamente por el usuario en la pagina de Opciones (por defecto `http://127.0.0.1:80`).
+- Todas las peticiones van directamente al controlador que el usuario configura (por defecto `http://127.0.0.1:80`). Cualquier host que no sea loopback requiere el permiso explícito `chrome.permissions.request()`.
+- La verificación de la licencia es local (firma ECDSA P-256); la extensión no contacta con ningún servidor de licencias.
+- No hay telemetría, analítica, publicidad ni servidores intermedios.
+- No se carga ni ejecuta código remoto; todo el código va empaquetado.
+- No se inyectan scripts en páginas web.
 
-- La extension **no** incluye telemetria, analitica, publicidad, balizas externas ni servidores intermedios.
-- La extension **no** carga ni ejecuta codigo remoto (`remote hosted code`): todo el codigo JavaScript, HTML y CSS se empaqueta localmente en el paquete de la extension.
-- La extension **no** inyecta *content scripts* en ninguna pagina web.
+## 4. Campos para el panel de Chrome Web Store
 
-## 4. Cumplimiento de Limited Use y campos sugeridos para Chrome Web Store Dashboard
-
-Si el propietario del repositorio decide publicar la extension en Chrome Web Store:
-
-- **Single purpose description:**
-  > Read-only monitor that inspects ABB RobotStudio / RobotWare 6 controller status, RAPID modules, I/O signals, event log entries, and RAPID symbol values over Robot Web Services (RWS 1.0 HTTP Digest).
-- **`storage` permission justification:**
-  > Stores non-sensitive connection parameters (host, port, RAPID task, username) in `chrome.storage.local` and keeps the transient RWS session cookie and optional session password exclusively in `chrome.storage.session` (`TRUSTED_CONTEXTS`).
-- **`sidePanel` permission justification:**
-  > Allows engineers to keep the read-only controller telemetry panel open beside their workspace in Chrome's Side Panel.
-- **Host permissions (`http://127.0.0.1/*`, `http://localhost/*`) + optional host permissions (`http://*/*`) justification:**
-  > Required for the service worker to send direct read-only RWS 1.0 HTTP Digest requests to local RobotStudio Virtual Controllers (loopback by default) or an explicit LAN IRC5 controller IP authorized interactively by the user via `chrome.permissions.request()`.
-- **Remote code declaration:** **No**, the extension executes only packaged local files under strict MV3 CSP (`script-src 'self'; object-src 'self'`).
-- **Data usage checkboxes:** All user-data collection categories unchecked (*"This item does not collect or use user data"*). Limited Use obligations honored because zero user/controller telemetry leaves the user's machine.
+- **Single purpose:** Inspect and operate ABB robot controllers (RobotStudio virtual controllers, IRC5, OmniCore) over Robot Web Services from a side panel.
+- **`storage`:** connection settings, fleet list and licence token in `chrome.storage.local`; password, session cookies and write mode only in `chrome.storage.session`.
+- **`sidePanel`:** keeps the instrumentation panel next to the user's work.
+- **`offscreen`:** keeps the RWS subscription and the TCP sampling of the oscilloscope alive beyond the service-worker lifetime and parses the XHTML event documents with DOMParser.
+- **Hosts:** `http://127.0.0.1/*`, `http://localhost/*`; optional `http://*/*`, `https://*/*` for controllers the user adds.
+- **Remote code:** none.
+- **Data usage:** no user data is collected or transmitted.

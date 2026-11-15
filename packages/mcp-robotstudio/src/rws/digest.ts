@@ -149,6 +149,14 @@ function selectQop(challengeQop?: string): "auth" | undefined {
   });
 }
 
+/** RFC 7617 Basic credentials. Callers must only send this over https://. */
+export function basicAuthorization(username: string, password: string): string {
+  const bytes = new TextEncoder().encode(`${username}:${password}`);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return `Basic ${btoa(bin)}`;
+}
+
 export function computeDigestAuthorization(input: DigestAuthorizationInput): {
   header: string;
   response: string;

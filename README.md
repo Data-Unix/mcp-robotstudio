@@ -18,6 +18,7 @@ Real **ABB RobotWare 6 Robot Web Services (RWS 1.0)** client, **Model Context Pr
 | [`referencias/rws-rw6-fixtures`](referencias/rws-rw6-fixtures/README.md) | Anonymized RobotWare 6.16 HTTP fixtures used by `FakeRwsServer` for deterministic unit, MCP stdio E2E, and Chrome E2E verification |
 | [`scripts/check_privacy.py`](scripts/check_privacy.py) | Automated privacy gate & Pack&Go self-test executed in CI |
 | [`scripts/anonymize_rspag.py`](scripts/anonymize_rspag.py) | Context-aware `.rspag` anonymizer that preserves binary blobs (`key.id`, geometry streams) and RAPID source identifiers |
+| [`scripts/sync_version.py`](scripts/sync_version.py) | One version for the npm package, the GitHub Release and the Chrome extension: `--set X.Y.Z` writes it, `--check` fails on any mismatch (CI and release gate) |
 
 ---
 

@@ -3,15 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MCP-ROBOTSTUDIO RWS Monitor</title>
+    <title>MCP-ROBOTSTUDIO</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header>
       <div class="title-row">
-        <h1>MCP-ROBOTSTUDIO RWS</h1>
-        <span class="badge badge-readonly" id="readonly-badge">SOLO LECTURA</span>
-        <span class="badge badge-status-warn" id="connection-badge">Conectando…</span>
+        <h1>MCP-ROBOTSTUDIO</h1>
+        <span class="badge" id="plan-badge">FREE</span>
+        <span class="badge badge-status-warn" id="connection-badge">Conectando</span>
+        <span class="badge" id="write-badge">LECTURA</span>
       </div>
       <div class="toolbar">
         <button type="button" class="primary" id="refresh-btn">Actualizar</button>
@@ -21,88 +22,300 @@
     </header>
 
     <div id="http-warning" class="banner banner-warn hidden">
-      Aviso de red: la conexion RWS usa HTTP sin cifrado hacia una IP remota. En RWS, la contrasena viaja como Digest MD5 (nunca Basic), pero los datos leidos circulan en claro por la LAN. Use loopback (127.0.0.1) siempre que sea posible.
+      Conexion HTTP sin cifrar hacia una IP remota (RWS 1.0). La contrasena viaja como Digest MD5, nunca Basic, pero los datos circulan en claro por la LAN.
     </div>
-
     <div id="error-banner" class="banner banner-err hidden" role="alert"></div>
 
-    <section class="card" aria-labelledby="heading-controller">
-      <h2 id="heading-controller">Estado del controlador</h2>
-      <div class="kv-grid" id="controller-grid"></div>
-      <div class="kv-grid" id="motion-grid" style="margin-top: 6px;"></div>
-    </section>
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" class="tab active" id="tab-01" data-tab="01" aria-selected="true">01 TELEMETRIA Y CINEMATICA</button>
+      <button type="button" role="tab" class="tab" id="tab-02" data-tab="02" aria-selected="false">02 FORENSE Y DIFF</button>
+      <button type="button" role="tab" class="tab" id="tab-03" data-tab="03" aria-selected="false">03 OSCILOSCOPIO Y FLOTA</button>
+      <button type="button" role="tab" class="tab" id="tab-04" data-tab="04" aria-selected="false">04 ALCANCE Y RECETAS</button>
+      <button type="button" role="tab" class="tab" id="tab-05" data-tab="05" aria-selected="false">05 ESTUDIO DE PRACTICAS</button>
+    </nav>
 
-    <section class="card" aria-labelledby="heading-modules">
-      <h2 id="heading-modules">Modulos RAPID (<span id="modules-count">0</span>)</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Modulo</th>
-              <th>Tipo</th>
-            </tr>
-          </thead>
-          <tbody id="modules-body"></tbody>
-        </table>
+    <!-- 01 TELEMETRIA Y CINEMATICA -->
+    <section class="tab-panel" id="panel-01" role="tabpanel">
+      <div class="card">
+        <h2>Estado del controlador</h2>
+        <div class="kv-grid" id="controller-grid"></div>
+      </div>
+      <div class="card">
+        <h2>Ejes y TCP (tool0 / wobj0)</h2>
+        <div class="kv-grid" id="motion-grid"></div>
+      </div>
+      <div class="card">
+        <h2>Modulos RAPID (<span id="modules-count">0</span>)</h2>
+        <div class="table-wrap short">
+          <table><thead><tr><th>Modulo</th><th>Tipo</th></tr></thead><tbody id="modules-body"></tbody></table>
+        </div>
+      </div>
+      <div class="card pro" data-feature="pcpTracker">
+        <h2>Puntero de programa y velocidad</h2>
+        <div class="kv-grid" id="pcp-grid"></div>
+        <div id="speed-alert" class="banner banner-warn hidden"></div>
+        <div class="row-inline"><button type="button" id="speed-fix-btn" class="write">Fijar 100%</button><span class="muted" id="speed-fix-out"></span></div>
+      </div>
+      <div class="card pro" data-feature="jointLimitBars">
+        <h2>Limites J1..J6, singularidades y manipulabilidad</h2>
+        <div id="limit-bars" class="bars"></div>
+        <div class="kv-grid" id="singularity-grid"></div>
+      </div>
+      <div class="card pro" data-feature="poseConverter">
+        <h2>Conversor de pose (OrientZYX / EulerZYX / NOrient / PoseMult)</h2>
+        <div class="grid-3">
+          <label>Tool <input type="text" id="conv-tool" value="tool0" /></label>
+          <label>WObj <input type="text" id="conv-wobj" value="wobj0" /></label>
+          <button type="button" id="conv-read-tcp">Leer TCP</button>
+        </div>
+        <div class="grid-3">
+          <label>Ez <input type="number" id="pc-ez" value="0" step="any" /></label>
+          <label>Ey <input type="number" id="pc-ey" value="180" step="any" /></label>
+          <label>Ex <input type="number" id="pc-ex" value="0" step="any" /></label>
+        </div>
+        <label>Pose A [[x,y,z],[q1,q2,q3,q4]] <input type="text" id="pc-pose-a" value="[[300,0,300],[0,0,1,0]]" /></label>
+        <label>Pose B (PoseMult A*B) <input type="text" id="pc-pose-b" value="[[0,0,50],[1,0,0,0]]" /></label>
+        <div class="row-inline"><button type="button" id="pc-run">Calcular</button></div>
+        <pre id="pc-out" class="mono"></pre>
       </div>
     </section>
 
-    <section class="card" aria-labelledby="heading-signals">
-      <h2 id="heading-signals">Senales I/O (<span id="signals-count">0</span>)</h2>
+    <!-- 02 FORENSE Y DIFF -->
+    <section class="tab-panel hidden" id="panel-02" role="tabpanel">
+      <div id="stop-indicator" class="banner banner-err hidden"></div>
+      <div class="card">
+        <h2>Ultimos eventos (/rw/elog/0)</h2>
+        <div class="table-wrap">
+          <table><thead><tr><th>Codigo</th><th>Titulo</th><th>Origen</th><th>Hora</th></tr></thead><tbody id="events-body"></tbody></table>
+        </div>
+      </div>
+      <div class="card pro" data-feature="forensicCapture">
+        <h2>Caja negra forense</h2>
+        <div class="row-inline">
+          <button type="button" class="primary" id="forensic-btn">Capturar Estado Forense</button>
+          <label class="check"><input type="checkbox" id="forensic-auto" /> Disparo automatico en parada</label>
+        </div>
+        <div class="row-inline">
+          <button type="button" id="forensic-json">Exportar JSON</button>
+          <button type="button" id="forensic-md">Exportar Markdown</button>
+        </div>
+        <pre id="forensic-out" class="mono tall"></pre>
+      </div>
+      <div class="card pro" data-feature="timeMachineDiff">
+        <h2>Time-Machine Diff (RAM del controlador frente a Golden Master)</h2>
+        <div class="grid-3">
+          <label>Modulo <input type="text" id="diff-module" value="Practica63_Final" /></label>
+          <label>Golden .mod <input type="file" id="diff-file" accept=".mod,.sys,.prg,.txt" /></label>
+          <button type="button" id="diff-btn">Comparar</button>
+        </div>
+        <div id="diff-summary" class="mono"></div>
+        <pre id="diff-out" class="mono tall"></pre>
+      </div>
+      <div class="card pro" data-feature="offlineValidator">
+        <h2>Validador sintactico offline y cargador seguro</h2>
+        <div class="grid-3">
+          <label>Archivo .mod <input type="file" id="val-file" accept=".mod,.sys,.prg,.txt" /></label>
+          <label class="check"><input type="checkbox" id="val-reach" checked /> Comprobar alcance IRB 120</label>
+          <button type="button" id="val-btn">Validar</button>
+        </div>
+        <textarea id="val-src" rows="6" spellcheck="false" placeholder="MODULE ... ENDMODULE"></textarea>
+        <div class="row-inline"><button type="button" id="load-btn" class="write">Cargar en el controlador (anti falso 204)</button></div>
+        <pre id="val-out" class="mono tall"></pre>
+      </div>
+    </section>
+
+    <!-- 03 OSCILOSCOPIO Y FLOTA -->
+    <section class="tab-panel hidden" id="panel-03" role="tabpanel">
+      <div class="card">
+        <h2>Senales I/O (<span id="signals-count">0</span>)</h2>
+        <div class="row-inline">
+          <input type="text" id="signal-filter" placeholder="Filtrar por nombre (DRV1, ARRAY, CAMINO)" aria-label="Filtrar senales" />
+          <button type="button" id="signal-filter-btn">Filtrar</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Scope</th><th>Nombre</th><th>Tipo</th><th>Valor</th><th>Estado</th></tr></thead><tbody id="signals-body"></tbody></table>
+        </div>
+      </div>
+      <div class="card pro" data-feature="oscilloscope">
+        <h2>Osciloscopio multicanal</h2>
+        <div class="grid-3">
+          <label>PERS (modulo/simbolo, coma) <input type="text" id="scope-pers" value="" placeholder="Practica63_Final/nPasadasArray" /></label>
+          <label class="check"><input type="checkbox" id="scope-tcp" checked /> TCP X/Y/Z</label>
+          <label>Ventana (s) <input type="number" id="scope-window" value="20" min="2" max="300" /></label>
+        </div>
+        <div class="row-inline">
+          <button type="button" class="primary" id="scope-start">Iniciar</button>
+          <button type="button" id="scope-stop">Detener</button>
+          <span class="mono" id="scope-status">detenido</span>
+        </div>
+        <canvas id="scope-canvas" width="760" height="260"></canvas>
+        <div class="mono small" id="scope-legend"></div>
+      </div>
+      <div class="card pro" data-feature="storePathCertifier">
+        <h2>Certificador de retorno StorePath / RestoPath</h2>
+        <div class="grid-3">
+          <label>Modulo <input type="text" id="cert-module" value="Practica63_Final" /></label>
+          <label>PERS parada <input type="text" id="cert-stop" value="pInterrupcion" /></label>
+          <label>PERS vuelta <input type="text" id="cert-back" value="pVuelta" /></label>
+        </div>
+        <div class="row-inline">
+          <button type="button" id="cert-btn">Medir</button>
+          <label>Tolerancia mm <input type="number" id="cert-tol" value="0.5" step="any" /></label>
+          <button type="button" id="cert-csv">CSV</button>
+          <button type="button" id="cert-md">Markdown</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Hora</th><th>Error mm</th><th>Error deg</th><th>Resultado</th></tr></thead><tbody id="cert-body"></tbody></table>
+        </div>
+      </div>
+      <div class="card pro" data-feature="fleetDashboard">
+        <h2>Flota multi-robot</h2>
+        <div class="row-inline"><button type="button" id="fleet-btn">Consultar flota</button><span class="muted">Celdas en Opciones</span></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Celda</th><th>Sistema</th><th>RWS</th><th>Modo</th><th>Motores</th><th>Ejec.</th><th>Speed</th><th>SMB</th></tr></thead><tbody id="fleet-body"></tbody></table>
+        </div>
+      </div>
+      <div class="card pro" data-feature="remoteBackup">
+        <h2>Backup remoto a TEMP</h2>
+        <div class="row-inline">
+          <input type="text" id="backup-dir" value="mcp_backup" aria-label="Directorio de backup" />
+          <button type="button" id="backup-btn" class="write">Crear backup</button>
+        </div>
+        <pre id="backup-out" class="mono"></pre>
+      </div>
+    </section>
+
+    <!-- 04 ALCANCE Y RECETAS -->
+    <section class="tab-panel hidden" id="panel-04" role="tabpanel">
+      <div class="card">
+        <h2>Lector de simbolo RAPID</h2>
+        <form id="symbol-form" class="row-inline">
+          <input type="text" id="symbol-module" value="BASE" placeholder="Modulo" aria-label="Modulo RAPID" />
+          <input type="text" id="symbol-name" value="tool0" placeholder="Simbolo" aria-label="Simbolo RAPID" />
+          <button type="submit" id="read-symbol-btn">Leer</button>
+        </form>
+        <pre id="symbol-output" class="mono">Pulse "Leer" para consultar un simbolo RAPID.</pre>
+      </div>
+      <div class="card">
+        <h2>Conversor Euler ZYX / cuaternion</h2>
+        <div class="grid-3">
+          <label>Ez <input type="number" id="conv-ez" value="0" step="any" /></label>
+          <label>Ey <input type="number" id="conv-ey" value="180" step="any" /></label>
+          <label>Ex <input type="number" id="conv-ex" value="0" step="any" /></label>
+        </div>
+        <label>Cuaternion [q1,q2,q3,q4] <input type="text" id="conv-q" value="[0,0,1,0]" /></label>
+        <div class="row-inline"><button type="button" id="conv-e2q">Euler a cuaternion</button><button type="button" id="conv-q2e">Cuaternion a Euler</button></div>
+        <pre id="conv-out" class="mono"></pre>
+      </div>
+      <div class="card pro" data-feature="reachProbe">
+        <h2>Sonda de alcance (sin mover el robot)</h2>
+        <div class="grid-3">
+          <label>X <input type="number" id="rp-x" value="340" step="any" /></label>
+          <label>Y <input type="number" id="rp-y" value="90" step="any" /></label>
+          <label>Z <input type="number" id="rp-z" value="205" step="any" /></label>
+        </div>
+        <label>Cuaternion <input type="text" id="rp-q" value="[0,0,1,0]" /></label>
+        <label>Tooldata / pose de la herramienta <input type="text" id="rp-tool" value="[TRUE,[[31.792631019,0,229.638935148],[0.945518576,0,0.325568154,0]],[1,[0,0,1],[1,0,0,0],0,0,0]]" /></label>
+        <div class="grid-3">
+          <label>Offs (dx dy dz; ...) <input type="text" id="rp-offs" value="0 0 30; 0 0 -15" /></label>
+          <label>Inclinaciones (deg) <input type="text" id="rp-tilts" value="0 10 20 30" /></label>
+          <button type="button" id="rp-btn">Sondear</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Incl.</th><th>Eje</th><th>Offs</th><th>Alcanza</th><th>Joints (deg)</th><th>|J5|</th></tr></thead><tbody id="rp-body"></tbody></table>
+        </div>
+        <pre id="rp-out" class="mono"></pre>
+      </div>
+      <div class="card pro" data-feature="teachByShowing">
+        <h2>Teach-by-Showing</h2>
+        <div class="grid-3">
+          <label>Nombre <input type="text" id="tb-name" value="pNuevo" /></label>
+          <label>Tool <input type="text" id="tb-tool" value="tool0" /></label>
+          <label>WObj <input type="text" id="tb-wobj" value="wobj0" /></label>
+        </div>
+        <div class="row-inline"><button type="button" id="tb-btn">Capturar pose actual</button></div>
+        <pre id="tb-out" class="mono"></pre>
+      </div>
+      <div class="card pro" data-feature="recipeEditor">
+        <h2>Editor seguro de recetas (PERS) con escudo anti-colision</h2>
+        <div class="grid-3">
+          <label>Modulo <input type="text" id="rc-module" value="Practica63_Final" /></label>
+          <label>Simbolo PERS <input type="text" id="rc-symbol" value="pInterrupcion" /></label>
+          <label>delta_max mm <input type="number" id="rc-delta" value="50" step="any" /></label>
+        </div>
+        <textarea id="rc-value" rows="2" spellcheck="false" placeholder="[[x,y,z],[q1,q2,q3,q4],[cf1,cf4,cf6,cfx],[9E9,...]]"></textarea>
+        <div class="row-inline">
+          <button type="button" id="rc-load">Leer valor actual</button>
+          <button type="button" id="rc-check">Comprobar escudo</button>
+          <button type="button" id="rc-write" class="write">Escribir</button>
+        </div>
+        <pre id="rc-out" class="mono"></pre>
+      </div>
+    </section>
+
+    <!-- 05 ESTUDIO DE PRACTICAS -->
+    <section class="tab-panel hidden" id="panel-05" role="tabpanel">
+      <div class="card">
+        <h2>Lista de verificacion de entrega</h2>
+        <div id="checklist"></div>
+      </div>
+      <div class="card">
+        <h2>Diagnostico rapido de .rspag</h2>
+        <label class="drop" id="rspag-drop">Arrastre un .rspag o pulse para elegir <input type="file" id="rspag-input" accept=".rspag,.zip" /></label>
+        <pre id="rspag-out" class="mono tall"></pre>
+        <div class="row-inline pro-inline" data-feature="rspagAnonymizer">
+          <button type="button" id="rspag-anon" class="primary">Anonimizar y descargar .rspag</button>
+          <button type="button" id="rspag-preview">Descargar Preview.png limpio</button>
+        </div>
+      </div>
+      <div class="card pro" data-feature="practiceWizard">
+        <h2>Asistente de resolucion de practicas</h2>
+        <div class="grid-3">
+          <label>Bloque
+            <select id="wz-block">
+              <option value="trayectorias">Trayectorias</option>
+              <option value="saltos">Saltos condicionales</option>
+              <option value="offs">Instrucciones RAPID / Offs</option>
+              <option value="pickplace">Pick&amp;Place / Colisiones / Interrupciones</option>
+            </select>
+          </label>
+          <label>Modulo <input type="text" id="wz-module" value="Practica_Generada" /></label>
+          <label>Comportamiento
+            <select id="wz-behavior"><option value="practica">Practica</option><option value="final">Final</option></select>
+          </label>
+        </div>
+        <label>Puntos (nombre x y z por linea) <textarea id="wz-points" rows="3" spellcheck="false">pA 340 90 205
+pB 315 -185 255</textarea></label>
+        <div class="grid-3">
+          <label>Altura Offs mm <input type="number" id="wz-approach" value="50" /></label>
+          <label>DI (salto / interrupcion) <input type="text" id="wz-di" value="" placeholder="CAMINO1 / ARRAY" /></label>
+          <label>DO pinza <input type="text" id="wz-do" value="" /></label>
+        </div>
+        <label>Herramienta (nombre y tooldata) <input type="text" id="wz-tool" value="MyTool [TRUE,[[31.792631019,0,229.638935148],[0.945518576,0,0.325568154,0]],[1,[0,0,1],[1,0,0,0],0,0,0]]" /></label>
+        <div class="row-inline">
+          <button type="button" id="wz-audit">1. Auditar controlador</button>
+          <button type="button" class="primary" id="wz-generate">2. Validar y generar</button>
+          <button type="button" id="wz-dl-mod">Descargar .mod</button>
+          <button type="button" id="wz-dl-readme">Descargar README.md</button>
+        </div>
+        <pre id="wz-audit-out" class="mono"></pre>
+        <div id="wz-incidents" class="small"></div>
+        <pre id="wz-out" class="mono tall"></pre>
+      </div>
+    </section>
+
+    <div id="license-dialog" class="card hidden">
+      <h2>MCP-ROBOTSTUDIO PRO</h2>
+      <p id="license-reason" class="small"></p>
       <div class="row-inline">
-        <input
-          type="text"
-          id="signal-filter"
-          placeholder="Filtrar senales por nombre (ej. DRV1, DI, DO)…"
-          aria-label="Filtrar senales"
-        />
-        <button type="button" id="signal-filter-btn">Filtrar</button>
+        <input type="text" id="license-token" placeholder="Clave de licencia" aria-label="Clave de licencia" />
+        <button type="button" class="primary" id="license-activate">Activar</button>
+        <button type="button" id="license-close">Cerrar</button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Valor</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody id="signals-body"></tbody>
-        </table>
-      </div>
-    </section>
+      <p class="small" id="license-status"></p>
+    </div>
 
-    <section class="card" aria-labelledby="heading-events">
-      <h2 id="heading-events">Ultimos eventos (/rw/elog/0)</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Codigo</th>
-              <th>Titulo</th>
-              <th>Origen</th>
-              <th>Hora</th>
-            </tr>
-          </thead>
-          <tbody id="events-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="card" aria-labelledby="heading-symbol">
-      <h2 id="heading-symbol">Lectura de simbolo RAPID (solo GET)</h2>
-      <form id="symbol-form" class="row-inline">
-        <input type="text" id="symbol-module" value="BASE" placeholder="Modulo (ej. BASE)" aria-label="Modulo RAPID" />
-        <input type="text" id="symbol-name" value="tool0" placeholder="Simbolo (ej. tool0)" aria-label="Simbolo RAPID" />
-        <button type="submit" id="read-symbol-btn">Leer</button>
-      </form>
-      <pre id="symbol-output">Pulse "Leer" para consultar un simbolo RAPID.</pre>
-    </section>
-
-    <p class="footer-note">
-      Extension estrictamente de solo lectura: no modifica senales, simbolos, programas ni movimiento del robot.
-    </p>
+    <p class="footer-note" id="footer-note">Lectura por defecto. Las escrituras exigen PRO y el modo escritura de sesion activado en Opciones.</p>
 
     <script type="module" src="panel.js"></script>
   </body>

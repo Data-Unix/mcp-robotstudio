@@ -20,6 +20,15 @@ Each `.json` file contains `request`, `status`, the relevant `headers`, a `note`
 | `13`, `14` | `jointtarget`, `robtarget?tool=tool0&wobj=wobj0&coordinate=Wobj` | 200 | Robot joints and TCP |
 | `15-mastership` | `/rw/mastership` | 200 | Mastership domains (cfg, motion, rapid) |
 
+## Captures added for v0.2.0 (2026-11-15, validation copy of Practica63_Final)
+
+| File | Request | Note |
+|---|---|---|
+| `16-pcp-en-ejecucion.json` | `GET /rw/rapid/tasks/T_ROB1/pcp` while running | PP: `beginposition`/`modulemame`; MP: `begposition`/`modulename` |
+| `17-pcp-sin-pp.json` | same, stopped with PP not set | `rel="error"` link with `-1073442809` |
+| `18-evento-ws-pers-value.json` | WebSocket frame, PERS `;value` | value in a sibling `<li class="rap-data">` |
+| `19-evento-ws-pp-change.json` | WebSocket frame, `pcp;programpointerchange` | `rap-pp-ev` with `BegPosLine`/`BegPosCol` |
+
 ## Cases seen in this session that cannot be captured with GET only
 
 These cases need writes or force errors, so only the literal fragment that was observed is recorded:

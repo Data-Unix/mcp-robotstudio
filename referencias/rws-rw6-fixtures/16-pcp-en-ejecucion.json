@@ -1,0 +1,9 @@
+{
+  "request": "GET /rw/rapid/tasks/T_ROB1/pcp",
+  "status": 200,
+  "headers": {
+    "content-type": "application/xhtml+xml"
+  },
+  "note": "Captura real RW 6.16.3007 (IRB120_3_58, copia de validacion de Practica63_Final) con el programa en ejecucion, 2026-11-15. progpointer usa beginposition/modulemame; motionpointer usa begposition/modulename.",
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><body><div class=\"state\"> <a href=\"tasks/T_ROB1/pcp\" rel=\"self\"></a> <a href=\"tasks/T_ROB1/pcp?action=show\" rel=\"action\"></a> <ul> <li class=\"pcp-info\" title=\"progpointer\"> <span class=\"beginposition\">87,21</span><span class=\"endposition\">87,86</span><span class=\"modulemame\">Practica63_Final</span><span class=\"routinename\">main</span><span class=\"changecount\">-1</span><span class=\"executiontype\">normal</span></li><li class=\"pcp-info\" title=\"motionpointer\"><span class=\"begposition\">87,27</span><span class=\"endposition\">87,56</span><span class=\"modulename\">Practica63_Final</span><span class=\"routinename\">main</span><span class=\"changecount\">-1</span></li> </ul></div></body></html>"
+}

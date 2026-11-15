@@ -1,37 +1,15 @@
 export { md5 } from "./md5.js";
 export {
+  basicAuthorization,
   computeDigestAuthorization,
   parseAuthenticateHeader,
   RwsError,
   type DigestAuthorizationInput,
   type DigestChallenge,
 } from "./digest.js";
-export {
-  decodeXmlEntities,
-  parseCtrlStateXml,
-  parseEventLogXml,
-  parseExecutionXml,
-  parseJointTargetXml,
-  parseMastershipXml,
-  parseModulesXml,
-  parseOpModeXml,
-  parseRobTargetXml,
-  parseRwsErrorBody,
-  parseSignalsListXml,
-  parseSingleSignalXml,
-  parseSymbolXml,
-  parseSystemXml,
-  parseTasksXml,
-  type EventLogEntry,
-  type IoSignalInfo,
-  type JointTargetInfo,
-  type PanelState,
-  type RapidModuleInfo,
-  type RapidTaskInfo,
-  type RobTargetInfo,
-  type RwsErrorDetail,
-  type SystemInfo,
-} from "./parsers.js";
+export * from "./dialect.js";
+export * from "./parsers.js";
+export * from "./subscription.js";
 export {
   RwsClient,
   RwsReadOnlyClient,
@@ -39,5 +17,8 @@ export {
   type CookieStore,
   type LoadModuleInput,
   type LoadModuleResult,
+  type ProgramPointerResult,
   type RwsClientOptions,
+  type RwsResponse,
+  type UserPrivileges,
 } from "./client.js";

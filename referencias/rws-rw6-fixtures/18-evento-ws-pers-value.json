@@ -1,0 +1,9 @@
+{
+  "request": "WebSocket ws://127.0.0.1:80/poll/<id> (robapi2_subscription) tras POST /subscription 1=/rw/rapid/symbol/data/RAPID/T_ROB1/Practica63_Final/nCeldasMatriz;value&1-p=2",
+  "status": 101,
+  "headers": {
+    "sec-websocket-protocol": "robapi2_subscription"
+  },
+  "note": "Trama real RW 6.16.3007 (copia de validacion de Practica63_Final en ejecucion), 2026-11-15. El valor llega en un <li class=\"rap-data\"> hermano del <li class=\"rap-value-ev\">, no dentro.",
+  "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><html xmlns=\"http://www.w3.org/1999/xhtml\">  <body>  <div class=\"state\"><a href=\"subscription/3\" rel=\"group\"></a> <ul> <li class=\"rap-value-ev\" title=\"value\"> <a href=\"/rw/rapid/symbol/data/RAPID/T_ROB1/Practica63_Final/nCeldasMatriz;value\" rel=\"self\"/></li><li class=\"rap-data\" title=\"RAPID/T_ROB1/Practica63_Final/nCeldasMatriz\"> <span class=\"value\">217</span></li>  </ul> </div> </body></html>"
+}

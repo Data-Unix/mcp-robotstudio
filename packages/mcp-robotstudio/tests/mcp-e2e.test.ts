@@ -152,6 +152,52 @@ describe("MCP stdio E2E (dist/cli.js against FakeRwsServer)", () => {
     }
   });
 
+  it("runs the v0.2.0 read tools over stdio and wires --allow-io-write + --audit-log", async () => {
+    const fs = await import("node:fs");
+    const os = await import("node:os");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-rs-e2e-"));
+    const logFile = path.join(dir, "audit.jsonl");
+    server.defineModule("Golden", "MODULE Golden\n  CONST num A:=1;\n  PROC main()\n  ENDPROC\nENDMODULE\n");
+    server.pcp = { module: "Golden", routine: "main", line: 3, column: 3 };
+    const { client, transport } = await connectCliClient(["--rws-url", baseUrl, "--allow-io-write", "--audit-log", logFile, "--agent", "e2e"]);
+    const call = async (name: string, args: Record<string, unknown> = {}) => {
+      const res = (await client.callTool({ name, arguments: args })) as Parameters<typeof assertValidMcpToolResponse>[0];
+      return { data: assertValidMcpToolResponse(res), isError: res.isError };
+    };
+    try {
+      const names = (await client.listTools()).tools.map((t) => t.name);
+      expect(names).toContain("write_io_signal");
+      expect(names).not.toContain("start_rapid");
+
+      expect((await call("get_program_pointer")).data.programPointer).toMatchObject({ module: "Golden", routine: "main", beginLine: 3 });
+      expect((await call("get_speed_ratio")).data).toMatchObject({ speedRatio: 100, cycleTimeFactor: 1 });
+      expect((await call("get_user_privileges")).data).toMatchObject({ users: ["Default User"], enabledScopes: ["io-write"] });
+      expect(String((await call("read_module_source", { module: "Golden" })).data.source)).toContain("CONST num A:=1;");
+      const diff = (await call("diff_module_with_golden", { module: "Golden", goldenContent: "MODULE Golden\n  CONST num A:=2;\n  PROC main()\n  ENDPROC\nENDMODULE\n" })).data;
+      expect(diff).toMatchObject({ identical: false, added: 1, removed: 1 });
+      const bad = await call("validate_rapid_offline", { content: "MODULE X\n  PROC main()\nENDMODULE" });
+      expect(bad.isError).toBe(true);
+      const reach = (await call("probe_reach_kinematics", { x: 1100, y: 0, z: 300, offsets: [[0, 0, 30]], tiltSweepDeg: [0, 20] })).data;
+      expect(reach.best).toBeNull();
+      const reach2 = (await call("probe_reach_kinematics", { x: 340, y: 90, z: 205, q: [0, 0, 1, 0], offsets: [[0, 0, 30]], tool: "[TRUE,[[31.792631019,0,229.638935148],[0.945518576,0,0.325568154,0]],[1,[0,0,1],[1,0,0,0],0,0,0]]" })).data;
+      expect((reach2.best as { allReachable: boolean }).allReachable).toBe(true);
+      const rspag = path.resolve(path.dirname(CLI_PATH), "../../../practicas/6.3-colisiones-interrupciones/entregables/Practica63_Final.rspag");
+      if (fs.existsSync(rspag)) expect((await call("audit_rspag_package", { path: rspag })).data.verdict).toBe("ok");
+      const forensic = (await call("capture_forensic_blackbox", { contextLines: 1 })).data;
+      expect((forensic.codeSnippet as { pointerLine: number }).pointerLine).toBe(3);
+      expect(String(forensic.markdown)).toContain("Informe forense");
+      const io = await call("write_io_signal", { name: "DRV1TESTE2", value: 1, pulseMs: 20 });
+      expect(io.data).toMatchObject({ pulsed: true, success: true });
+    } finally {
+      await transport.close();
+    }
+    const log = fs.readFileSync(logFile, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { tool: string; agent: string });
+    expect(log.length).toBeGreaterThanOrEqual(10);
+    expect(log.every((l) => l.agent === "e2e")).toBe(true);
+    expect(log.at(-1)?.tool).toBe("write_io_signal");
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
   it("exposes write tools only with --allow-write and reports controller changes", async () => {
     const { client, transport } = await connectCliClient([
       "--rws-url",

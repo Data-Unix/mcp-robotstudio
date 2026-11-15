@@ -1,0 +1,128 @@
+name: Release - npm tarball + Chrome zip (lockstep version)
+
+# Runs on a pushed tag vX.Y.Z or by hand for an existing tag. Nothing is
+# published unless every check in the verify job passes.
+on:
+  push:
+    tags: [ "v*.*.*" ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release (vX.Y.Z)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify ${{ github.event.inputs.tag || github.ref_name }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    defaults:
+      run:
+        working-directory: packages
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/package-lock.json
+
+      - name: Tag must equal the lockstep version
+        id: version
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          python3 ../scripts/sync_version.py --check
+          VERSION="$(node -p "require('./mcp-robotstudio/package.json').version")"
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::tag $TAG does not match lockstep version v$VERSION"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Install Chromium for MV3 Chrome extension E2E
+        run: npx playwright install --with-deps chromium
+
+      - name: Build, lint, typecheck and test (incl. Playwright MV3 E2E)
+        run: |
+          npm run build
+          npm run lint
+          npm run typecheck
+          npm test
+
+      - name: Production dependency audit and privacy gate
+        run: |
+          npm audit --omit=dev --audit-level=high
+          python3 ../scripts/check_privacy.py --self-test
+
+      - name: Pack npm tarball + Chrome zip, re-check version, write SHA256SUMS
+        run: |
+          npm run pack:zip -w @mcp-robotstudio/chrome-extension
+          npm pack -w mcp-robotstudio
+          python3 ../scripts/sync_version.py --check
+          VERSION="${{ steps.version.outputs.version }}"
+          test -f "mcp-robotstudio-$VERSION.tgz"
+          mkdir -p ../release
+          mv "mcp-robotstudio-$VERSION.tgz" ../release/
+          cp chrome-extension/mcp-robotstudio-rws-monitor.zip ../release/
+          cd ../release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - name: Keep release files for the publish job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: release/
+          if-no-files-found: error
+
+  publish:
+    name: Publish v${{ needs.verify.outputs.version }}
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Download verified release files
+        uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: release
+
+      - name: Set up Node.js 22 (npm registry)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish the npm tarball
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: npm publish "release/mcp-robotstudio-$VERSION.tgz" --provenance --access public
+
+      - name: Create the GitHub Release with tarball, Chrome zip and SHA256SUMS
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          gh release create "v$VERSION" release/* \
+            --title "v$VERSION" \
+            --notes "npm: mcp-robotstudio@$VERSION · Chrome extension: mcp-robotstudio-rws-monitor.zip ($VERSION). Checksums in SHA256SUMS.txt."
