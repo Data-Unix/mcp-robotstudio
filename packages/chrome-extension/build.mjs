@@ -10,6 +10,7 @@ const EXTENSION_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(EXTENSION_DIR, "public");
 const DIST_DIR = path.join(EXTENSION_DIR, "dist");
 const ICONS_DIR = path.join(DIST_DIR, "icons");
+const ZIP_OUTPUT = path.join(EXTENSION_DIR, "mcp-robotstudio-rws-monitor.zip");
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -100,7 +101,86 @@ function createRobotIconPng(size) {
   ]);
 }
 
-export async function buildExtension() {
+function collectDistFiles(dir, prefix = "") {
+  const entries = [];
+  for (const item of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    const full = path.join(dir, item.name);
+    const rel = prefix ? `${prefix}/${item.name}` : item.name;
+    if (item.isDirectory()) {
+      entries.push(...collectDistFiles(full, rel));
+    } else {
+      entries.push({ rel, full });
+    }
+  }
+  return entries;
+}
+
+function writeChromeWebStoreZip(distDir, zipPath) {
+  const files = collectDistFiles(distDir);
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  for (const { rel, full } of files) {
+    const nameBuf = Buffer.from(rel, "utf8");
+    const raw = fs.readFileSync(full);
+    const deflated = zlib.deflateRawSync(raw);
+    const checksum = crc32(raw);
+
+    const local = Buffer.alloc(30 + nameBuf.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4); // version needed
+    local.writeUInt16LE(0x0800, 6); // UTF-8 filename flag
+    local.writeUInt16LE(8, 8); // DEFLATE
+    local.writeUInt16LE(0, 10);
+    local.writeUInt16LE(0x5421, 12);
+    local.writeUInt32LE(checksum, 14);
+    local.writeUInt32LE(deflated.length, 18);
+    local.writeUInt32LE(raw.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    local.writeUInt16LE(0, 28);
+    nameBuf.copy(local, 30);
+
+    const central = Buffer.alloc(46 + nameBuf.length);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0x0800, 8);
+    central.writeUInt16LE(8, 10);
+    central.writeUInt16LE(0, 12);
+    central.writeUInt16LE(0x5421, 14);
+    central.writeUInt32LE(checksum, 16);
+    central.writeUInt32LE(deflated.length, 20);
+    central.writeUInt32LE(raw.length, 24);
+    central.writeUInt16LE(nameBuf.length, 28);
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt16LE(0, 36);
+    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(offset, 42);
+    nameBuf.copy(central, 46);
+
+    localParts.push(local, deflated);
+    centralParts.push(central);
+    offset += local.length + deflated.length;
+  }
+
+  const centralDir = Buffer.concat(centralParts);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(files.length, 8);
+  eocd.writeUInt16LE(files.length, 10);
+  eocd.writeUInt32LE(centralDir.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  fs.writeFileSync(zipPath, Buffer.concat([...localParts, centralDir, eocd]));
+}
+
+export async function buildExtension({ zip = false } = {}) {
   fs.rmSync(DIST_DIR, { recursive: true, force: true });
   fs.mkdirSync(ICONS_DIR, { recursive: true });
 
@@ -145,11 +225,15 @@ export async function buildExtension() {
     }
     await esbuild.stop().catch(() => undefined);
   }
+
+  if (zip) {
+    writeChromeWebStoreZip(DIST_DIR, ZIP_OUTPUT);
+  }
 }
 
 const isDirectRun =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
-  await buildExtension();
+  await buildExtension({ zip: process.argv.includes("--zip") });
 }

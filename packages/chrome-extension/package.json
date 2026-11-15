@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "pack:zip": "node build.mjs --zip",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node build.mjs && vitest run --no-file-parallelism"
   },

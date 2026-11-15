@@ -39,11 +39,18 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "mcp-server",
     "abb",
+    "abb-robotics",
     "robotstudio",
     "robotware",
+    "robotware-6",
     "rws",
-    "robotics"
+    "irc5",
+    "rapid",
+    "robotics",
+    "industrial-automation",
+    "chrome-extension"
   ],
   "repository": {
     "type": "git",

@@ -52,6 +52,7 @@ station*/
 node_modules/
 packages/*/dist/
 packages/chrome-extension/.playwright-profile/
+packages/chrome-extension/*.zip
 *.tgz
 *.tsbuildinfo
 coverage/

@@ -10,6 +10,7 @@ import { FakeRwsServer } from "../../mcp-robotstudio/dist/testing/fake-rws-serve
 const EXTENSION_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST_DIR = path.join(EXTENSION_DIR, "dist");
 const SCREENSHOT_PATH = path.join(EXTENSION_DIR, "docs/panel-screenshot.png");
+const CWS_SCREENSHOT_PATH = path.join(EXTENSION_DIR, "docs/cws-screenshot-1280x800.png");
 
 describe("Chrome Extension MV3 E2E against FakeRwsServer", () => {
   let server: FakeRwsServer;
@@ -147,8 +148,17 @@ describe("Chrome Extension MV3 E2E against FakeRwsServer", () => {
         }
       }
 
-      // 7. Capture screenshot for manual & visual verification
+      // 7. Capture side-panel screenshot + exact 1280x800 Chrome Web Store screenshot
+      await panelPage.evaluate(() => window.scrollTo(0, 0));
       await panelPage.screenshot({ path: SCREENSHOT_PATH, fullPage: true });
+      await panelPage.setViewportSize({ width: 1280, height: 800 });
+      await panelPage.evaluate(() => window.scrollTo(0, 0));
+      await panelPage.screenshot({ path: CWS_SCREENSHOT_PATH, fullPage: false });
+
+      const cwsPng = fs.readFileSync(CWS_SCREENSHOT_PATH);
+      expect(cwsPng.readUInt32BE(16)).toBe(1280);
+      expect(cwsPng.readUInt32BE(20)).toBe(800);
+
       await panelPage.close();
     } finally {
       await context.close();
